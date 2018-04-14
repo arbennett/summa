@@ -71,13 +71,13 @@ ifeq "$(isOpenMP)" "yes"
  FLAGS_OMP = -fopenmp
 endif
 
-FLAGS_NOAH = -O3 -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
-FLAGS_COMM = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
-FLAGS_SUMMA = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
+#FLAGS_NOAH = -O3 -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
+#FLAGS_COMM = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
+#FLAGS_SUMMA = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
 
-#FLAGS_NOAH = -p -g -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 -fbacktrace -Wno-unused -Wno-unused-dummy-argument
-#FLAGS_COMM = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
-#FLAGS_SUMMA = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
+FLAGS_NOAH = -p -g -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 -fbacktrace -Wno-unused -Wno-unused-dummy-argument
+FLAGS_COMM = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
+FLAGS_SUMMA = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
 
 endif
 
@@ -152,12 +152,12 @@ ifeq "$(isOpenMP)" "yes"
 endif
 
 # on hydro-c1
-NCDF_PATH = /opt/netcdf4-intel
-LAPK_PATH = /usr
+#NCDF_PATH = /opt/netcdf4-intel
+#LAPK_PATH = /usr
 
 # on cheyenne
-#NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/17.0.1
-#LAPK_PATH = /glade/u/apps/opt/intel/2017u1/compilers_and_libraries/linux/mkl/lib/intel64
+NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/17.0.1
+LAPK_PATH = /glade/u/apps/opt/intel/2017u1/compilers_and_libraries/linux/mkl/lib/intel64
 
 # define the lapack libraries
 # hydro-c1

@@ -25,9 +25,7 @@ MODULE var_lookup
  private
  ! local variables
  integer(i4b),parameter            :: ixVal =1                      ! an example 4 byte integer
- integer(8),parameter              :: ix8Val=2                      ! an example 8 byte integer
- integer(i4b),parameter            :: iLength =storage_size(ixVal)   ! size of the example 4 byte integer
- integer(i4b),parameter            :: i8Length=storage_size(ix8Val)  ! size of the example 8 byte integer
+ integer(i4b),parameter            :: iLength =storage_size(ixVal)  ! size of the example 4 byte integer
 
  ! ***************************************************************************************
  ! (0) define model decisions
@@ -123,7 +121,7 @@ MODULE var_lookup
  end type iLook_type
 
  type, public  ::  iLook_id
-  integer(8)    :: hruId         = integerMissing  ! ID label defining hydrologic response unit (-)
+  integer(i4b)    :: hruId         = integerMissing  ! index defining hydrologic response unit (-)
  end type iLook_id
 
  ! ***********************************************************************************************************
@@ -854,7 +852,7 @@ MODULE var_lookup
  integer(i4b),parameter,public :: maxvarForc      = storage_size(iLookFORCE)/iLength
  integer(i4b),parameter,public :: maxvarAttr      = storage_size(iLookATTR)/iLength
  integer(i4b),parameter,public :: maxvarType      = storage_size(iLookTYPE)/iLength
- integer(i4b),parameter,public :: maxvarId        = storage_size(iLookID)/i8Length
+ integer(i4b),parameter,public :: maxvarId        = storage_size(iLookID)/iLength
  integer(i4b),parameter,public :: maxvarMpar      = storage_size(iLookPARAM)/iLength
  integer(i4b),parameter,public :: maxvarProg      = storage_size(iLookPROG)/iLength
  integer(i4b),parameter,public :: maxvarDiag      = storage_size(iLookDIAG)/iLength

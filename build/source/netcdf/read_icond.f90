@@ -106,8 +106,8 @@ contains
 
    ! multi HRU
    else
-    gru_struc(iGRU)%hruInfo(iHRU)%nSnow = snowData(gru_struc(iGRU)%hruInfo(iHRU)%hru_nc)
-    gru_struc(iGRU)%hruInfo(iHRU)%nSoil = soilData(gru_struc(iGRU)%hruInfo(iHRU)%hru_nc)
+    gru_struc(iGRU)%hruInfo(iHRU)%nSnow = snowData(gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix)
+    gru_struc(iGRU)%hruInfo(iHRU)%nSoil = soilData(gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix)
    endif 
 
   end do
@@ -264,7 +264,7 @@ contains
 
     ! get the index in the file: multi HRU
     else
-     ixFile = gru_struc(iGRU)%hruInfo(iHRU)%hru_nc
+     ixFile = gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix
     endif
 
     ! put the data into data structures and check that none of the values are set to nf90_fill_double

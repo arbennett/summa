@@ -32,7 +32,7 @@ contains
  ! ************************************************************************************************
  ! public subroutine ffile_info: read information on model forcing files
  ! ************************************************************************************************
- subroutine ffile_info(nGRU,err,message)
+ subroutine ffile_info(nGRU,fileHRU,err,message)
  ! used to read metadata on the forcing data file
  USE ascii_util_module,only:file_open
  USE ascii_util_module,only:linewidth
@@ -49,7 +49,7 @@ contains
  USE globalData,only:gru_struc               ! gru-hru mapping structure
  implicit none
  ! define input & output
- integer(i4b),intent(in)              :: nGRU             ! number of grouped response units
+ integer(i4b),intent(in)              :: nGRU,fileHRU     ! number of grouped response units and global HRUs in forcing file
  integer(i4b),intent(out)             :: err              ! error code
  character(*),intent(out)             :: message          ! error message
  ! define local variables
@@ -61,6 +61,12 @@ contains
  character(LEN=nf90_max_name)         :: varName          ! character array of netcdf variable name
  integer(i4b)                         :: iNC              ! index of a variable in netcdf file
  integer(i4b)                         :: nvar             ! number of variables in netcdf local attribute file
+ integer(i4b)                         :: iHRU             ! counter for loops over fileHRUs
+ integer(i4b),allocatable             :: id_int_vec(:)    ! temporary ID variables from forcing netcdf file
+ integer(8),allocatable               :: id_int8_vec(:)   ! temporary ID variables from forcing netcdf file
+ character(len=32),allocatable        :: id_str_vec(:)    ! temporary ID variables from forcing netcdf file
+ integer(i4b)                         :: varXtype         ! tmp variable for inquiring about netcdf variable type (xtype)
+
  ! the rest
  character(LEN=linewidth),allocatable :: dataLines(:)     ! vector of lines of information (non-comment lines)
  character(len=256)                   :: cmessage         ! error message for downwind routine
@@ -73,7 +79,6 @@ contains
  integer(i4b)                         :: file_nHRU        ! number of HRUs in current forcing file
  integer(i4b)                         :: nForcing         ! number of forcing variables
  integer(i4b)                         :: iGRU,localHRU_ix ! index of GRU and HRU
- integer(8)                           :: ncHruId(1)       ! hruID from the forcing files
  real(dp)                             :: dataStep_iFile   ! data step for a given forcing data file
  logical(lgt)                         :: xist             ! .TRUE. if the file exists
 
@@ -228,25 +233,68 @@ contains
      err = nf90_inq_varid(ncid,trim(varname),varId)
      if(err/=0)then; message=trim(message)//'hruID variable not present'; return; endif
 
+     ! check ID type (int, int64, or string for now ...)
+     err = nf90_inquire_variable(ncID,varId,xtype=varXtype);  if (err/=0) then; message=trim(message)//'problem finding hruId type'; return; end if
+     print*, 'hruId varXtype=', varXtype
+
+     ! create space for vector of ID strings (all in netcdf file)
+     ! if switching to the block read approach for all other attributes, do these allocations up top
+     allocate(id_str_vec(fileHRU))           
+
+     ! Read the hruId in the right netcdf format and convert if necessary to string
+     if (varXtype==4) then
+       ! get int IDs from netcdf file (all)
+       allocate(id_int_vec(fileHRU))
+       err = nf90_get_var(ncID,varId,id_int_vec,start=(/1/), count=(/fileHRU/))
+       if(err/=nf90_noerr)then; message=trim(message)//'problem reading ints: '//trim(varName); return; end if
+       ! convert int IDs from netcdf file into strings
+       do iHRU=1,fileHRU
+         write(id_str_vec(iHRU),*) id_int_vec(iHRU)
+       end do
+       deallocate(id_int_vec)
+
+     else if (varXtype==10) then
+       ! get int8 IDs from netcdf file (all)
+       allocate(id_int8_vec(fileHRU))
+       err = nf90_get_var(ncID,varId,id_int8_vec,start=(/1/), count=(/fileHRU/))
+       if(err/=nf90_noerr)then; message=trim(message)//'problem reading int64s: '//trim(varName); return; end if
+       ! convert int IDs from netcdf file into strings
+       do iHRU=1,fileHRU
+         write(id_str_vec(iHRU),*) id_int8_vec(iHRU)
+       end do
+       deallocate(id_int8_vec)
+
+     else if (varXtype==12) then
+       ! get string IDs from netcdf file      
+       err = nf90_get_var(ncID,varId,id_str_vec,start=(/1/), count=(/fileHRU/))
+       if(err/=nf90_noerr)then; message=trim(message)//'problem reading strings: '//trim(varName); return; end if
+
+     else 
+       print*, trim(message)//'hruId type=',varXtype,' not found in forcing file'; stop
+
+     end if ! end if condition block for handing different Id types in forcing file
+
+     ! now check Id consistency between attributes and forcing files (order and values), and store min & max indexes for run
      ixHRUfile_min=huge(1)
      ixHRUfile_max=0
-     ! check that the hruId is what we expect
-     ! NOTE: we enforce that the HRU order in the forcing files is the same as in the zLocalAttributes files (too slow otherwise)
      do iGRU=1,nGRU
       do localHRU_ix=1,gru_struc(iGRU)%hruCount
-       ! check the HRU is what we expect
-       err = nf90_get_var(ncid,varId,ncHruId,start=(/gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc/),count=(/1/))
-       if(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_id /= ncHruId(1))then
-        write(message,'(a,i0,a,i0,a,i0,a,a)') trim(message)//'hruId for global HRU: ',gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc,' - ',  &
-            ncHruId(1), ' differs from the expected: ',gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_id, ' in file ', trim(infile)
-        write(message,'(a)') trim(message)//' order of hruId in forcing file needs to match order in zLocalAttributes.nc'
-        err=40; return
+
+       if (gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_id /= trim(id_str_vec(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix))) then
+         ! mismatch found
+         write(message,'(a,i0,a,a,a,a,a,a)') trim(message)//'hruId for global HRU: ',gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix,  &
+           ' - ', trim(id_str_vec(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix)), ' differs from the expected: ',                   &
+           gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_id, ' in file ', trim(infile)
+         write(message,'(a)') trim(message)//' the order of hruId in forcing file needs to match the hruId order in local attributes file.'
+         err=40; return
        endif
-       ! save the index of the minimum and maximum HRUs in the file
-       if(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc < ixHRUfile_min) ixHRUfile_min = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc
-       if(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc > ixHRUfile_max) ixHRUfile_max = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc
+       ! save the minimum and maximum indexes of the HRUs in the current run
+       if(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix < ixHRUfile_min) ixHRUfile_min = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix
+       if(gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix > ixHRUfile_max) ixHRUfile_max = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix
       end do
      end do
+
+     deallocate(id_str_vec)
 
     ! OK to have additional variables in the forcing file that are not used
     case default; cycle

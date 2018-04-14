@@ -137,8 +137,9 @@ contains
  USE snwDensify_module,only:snwDensify      ! snow densification (compaction and cavitation)
  USE var_derive_module,only:calcHeight      ! module to calculate height at layer interfaces and layer mid-point
  implicit none
+
  ! model control
- integer(8),intent(in)                :: hruId                  ! hruId
+ character(len=32),intent(in)         :: hruId                  ! hruId
  real(dp),intent(inout)               :: dt_init                ! used to initialize the size of the sub-step
  logical(lgt),intent(inout)           :: computeVegFlux         ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
  ! data structures (input)
@@ -1200,7 +1201,7 @@ contains
  !print*, 'nsub, mLayerTemp(iLayer), mLayerVolFracIce(iLayer) = ', nsub, mLayerTemp(iLayer), mLayerVolFracIce(iLayer)
  !print*, 'nsub = ', nsub
  if(nsub>50000)then
-  write(message,'(a,i0)') trim(cmessage)//'number of sub-steps > 50000 for HRU ', hruID
+  write(message,'(a,a)') trim(cmessage)//'number of sub-steps > 50000 for HRU ', trim(hruID)
   err=20; return
  end if
 

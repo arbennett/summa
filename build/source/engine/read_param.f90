@@ -36,7 +36,7 @@ USE netcdf_util_module,only:netcdf_err     ! netcdf error handling function
 
 ! data types
 USE data_types,only:gru_double             ! spatial double data type:  x%gru(:)%var(:)
-USE data_types,only:gru_hru_int8           ! spatial integer data type: x%gru(:)%hru(:)%var(:)
+USE data_types,only:gru_hru_chr32          ! spatial integer data type: x%gru(:)%hru(:)%var(:)
 USE data_types,only:gru_hru_doubleVec      ! spatial double data type:  x%gru(:)%hru(:)%var(:)%dat(:)
 
 implicit none
@@ -62,7 +62,7 @@ contains
  integer(i4b),        intent(in)       :: startGRU         ! index of single GRU if runMode = startGRU
  integer(i4b),        intent(in)       :: nHRU             ! number of global HRUs
  integer(i4b),        intent(in)       :: nGRU             ! number of global GRUs
- type(gru_hru_int8),  intent(in)       :: idStruct         ! local labels for hru and gru IDs
+ type(gru_hru_chr32), intent(in)       :: idStruct         ! local labels for hru and gru IDs
  ! define output
  type(gru_hru_doubleVec),intent(inout) :: mparStruct       ! model parameters
  type(gru_double)    ,intent(inout)    :: bparStruct       ! basin parameters
@@ -87,12 +87,17 @@ contains
  integer(i4b)                          :: nGRU_file        ! number of GRUs in the parafile
  integer(i4b)                          :: nSoil_file       ! number of soil layers in the file
  integer(i4b)                          :: idim_list(2)     ! list of dimension ids
+ integer(i4b)                          :: varXtype         ! tmp variable for inquiring about netcdf variable type (xtype)
  ! data in the netcdf file
  integer(i4b)                          :: parLength        ! length of the parameter data
- integer(8),allocatable                :: hruId(:)         ! HRU identifier in the file
+ character(len=32),allocatable         :: hruId(:)         ! HRU identifier in the file
  real(dp),allocatable                  :: parVector(:)     ! model parameter vector
  logical                               :: fexist           ! inquire whether the parmTrial file exists
  integer(i4b)                          :: fHRU             ! index of HRU in input file
+ integer(i4b),allocatable              :: id_int_vec(:)    ! temporary ID variables from local attributes netcdf file
+ integer(8),allocatable                :: id_int8_vec(:)   ! temporary ID variables from local attributes netcdf file
+ character(len=32),allocatable         :: id_str_vec(:)    ! temporary ID variables from local attributes netcdf file
+
 
  ! Start procedure here
  err=0; message="read_param/"
@@ -130,38 +135,41 @@ contains
   if(trim(dimName)=='gru') nGRU_file=dimLength
  end do
 
- ! allocate hruID vector
- allocate(hruId(nHRU_file))
+ ! allocate hruID vector (and temporary ID vector)
+ allocate(hruId(nHRU_file), id_str_vec(nHRU_file))
 
  ! check HRU dimension exists
  if(nHRU_file==integerMissing)then
   message=trim(message)//'unable to identify HRU dimension in file '//trim(infile)
   err=20; return
- endif
+ end if
 
  ! check have the correct number of HRUs
  if ((irunMode==irunModeFull).and.(nHRU_file/=nHRU)) then
   message=trim(message)//'incorrect number of HRUs in file '//trim(infile)
   err=20; return
- endif
+ end if
  if ((irunMode==irunModeHRU).and.(nHRU_file<checkHRU)) then
   message=trim(message)//'not enough HRUs in file '//trim(infile)
   err=20; return
- endif
+ end if
 
  ! check have the correct number of GRUs
  if ((irunMode==irunModeGRU).and.(nGRU_file<startGRU).and.(nGRU_file/=integerMissing)) then
   message=trim(message)//'not enough GRUs in file '//trim(infile)
   err=20; return
- endif
+ end if
  if ((irunMode==irunModeFull).and.(nGRU_file/=nGRU).and.(nGRU_file/=integerMissing)) then
   message=trim(message)//'incorrect number of GRUs in file '//trim(infile)
   err=20; return
- endif
+ end if
 
  ! **********************************************************************************************
- ! * read the HRU index
+ ! * read the HRU IDs
  ! **********************************************************************************************
+
+ ! for now, allowing HRU IDs to be different types (int, int64, string, ...) 
+ ! but have to handle cases in the netcdf read and convert to strings internally
 
  ! loop through the parameters in the NetCDF file
  do ivarid=1,nVars
@@ -170,51 +178,89 @@ contains
   err=nf90_inquire_variable(ncid, ivarid, name=parName)
   call netcdf_err(err,message); if (err/=0) then; err=20; return; end if
 
-  print*, trim(parName)
-
   ! special case of the HRU id
   if(trim(parName)=='hruIndex' .or. trim(parName)=='hruId')then
 
-   ! read HRUs
-   err=nf90_get_var(ncid, ivarid, hruId)
-   if(err/=0)then; message=trim(message)//trim(cmessage); return; end if
+   print*, 'reading parameter file: ',trim(parName)
+
+   ! check ID type (int, int64, string, ...)
+   err = nf90_inquire_variable(ncID,ivarid,xtype=varXtype);  if (err/=0) then; message=trim(message)//'cannot find hruId type'; return; end if
+
+   ! read netcdf IDs and convert if needed
+   if (varXtype==4) then
+     ! reading IDs as ints
+     allocate(id_int_vec(nHRU_file))
+     err = nf90_get_var(ncID,ivarid,id_int_vec,start=(/1/), count=(/nHRU_file/))
+     if(err/=nf90_noerr)then; message=trim(message)//'problem reading param file int hruIds'; return; end if
+     ! convert int IDs from netcdf file into strings
+     do iHRU=1,nHRU_file
+       write(id_str_vec(iHRU),*) id_int_vec(iHRU)
+     end do
+     deallocate(id_int_vec)
+
+   else if (varXtype==10) then
+     ! reading IDs as int64s
+     allocate(id_int8_vec(nHRU_file))
+     err = nf90_get_var(ncID,ivarid,id_int8_vec,start=(/1/), count=(/nHRU_file/))
+     if(err/=nf90_noerr)then; message=trim(message)//'problem reading param file int64 hruIDs'; return; end if
+     ! convert int IDs from netcdf file into strings
+     do iHRU=1,nHRU_file
+       write(id_str_vec(iHRU),*) id_int8_vec(iHRU)
+     end do
+     deallocate(id_int8_vec)
+
+   else if (varXtype==12) then
+     ! reading IDs as strings
+     err = nf90_get_var(ncID,ivarid,id_str_vec,start=(/1/), count=(/nHRU_file/))
+     if(err/=nf90_noerr)then; message=trim(message)//'problem reading param file string hruIds'; return; end if
+
+   else 
+     print*, trim(message)//'hruId type=',varXtype,' not found in parameters file'; stop
+
+   end if ! end if condition block to handle different types of Ids in attribute files
+
+   ! trim temporary ID results to store in final hruId vector
+   do iHRU=1,nHRU_file
+     hruId(iHRU) = trim(id_str_vec(iHRU))
+   end do
+   deallocate(id_str_vec)
 
    ! check HRUs  -- expect HRUs to be in the same order as the local attributes
    if (iRunMode==iRunModeFull) then
     do iHRU=1,nHRU
      iGRU=index_map(iHRU)%gru_ix
      localHRU_ix=index_map(iHRU)%localHRU_ix
-     if((hruId(iHRU)>0).and.(hruId(iHRU)/=idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId)))then
-      write(message,'(a,i0,a,i0,a)') trim(message)//'mismatch for HRU ', idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId), '(param HRU = ', hruId(iHRU), ')'
+     if((len(trim(hruId(iHRU)))>0).and.(hruId(iHRU)/=idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId)))then
+      write(message,'(a,a,a,a,a)') trim(message)//'mismatch for HRU ', idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId), '(param HRU = ', hruId(iHRU), ')'
       err=20; return
-     endif
+     end if
     end do  ! looping through HRUs
 
    else if (iRunMode==iRunModeGRU) then
     do iHRU=1,nHRU
      iGRU=index_map(iHRU)%gru_ix
      localHRU_ix=index_map(iHRU)%localHRU_ix
-     fHRU = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc
+     fHRU = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix
      if(hruId(fHRU)/=idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId))then
-     write(message,'(a,i0,a,i0,a)') trim(message)//'mismatch for HRU ', idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId), '(param HRU = ', hruId(iHRU), ')'
+     write(message,'(a,a,a,a,a)') trim(message)//'mismatch for HRU ', idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId), '(param HRU = ', hruId(iHRU), ')'
      err=20; return
-    endif
-   enddo
+    end if
+   end do
 
    else if (iRunMode==iRunModeHRU) then
     iGRU=index_map(1)%gru_ix
     localHRU_ix=index_map(1)%localHRU_ix
     if(hruId(checkHRU)/=idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId))then
-     write(message,'(a,i0,a,i0,a)') trim(message)//'mismatch for HRU ', idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId), '(param HRU = ', hruId(iHRU), ')'
+     write(message,'(a,a,a,a,a)') trim(message)//'mismatch for HRU ', idStruct%gru(iGRU)%hru(localHRU_ix)%var(iLookID%hruId), '(param HRU = ', hruId(iHRU), ')'
      err=20; return
-    endif
+    end if
 
    ! error check
    else
     err = 20; message = 'run mode not recognized'; return;
    end if
 
-  endif   ! if the HRU id
+  endif   ! if the HRU id (only variable processed in this loop)
 
  end do  ! looping through variables in the file
 
@@ -280,7 +326,7 @@ contains
     ! map to the GRUs and HRUs
     iGRU=index_map(iHRU)%gru_ix
     localHRU_ix=index_map(iHRU)%localHRU_ix
-    fHRU = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc
+    fHRU = gru_struc(iGRU)%hruInfo(localHRU_ix)%hru_nc_ix
 
     ! read parameter data
     select case(nDims)

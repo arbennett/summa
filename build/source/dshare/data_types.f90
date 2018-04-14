@@ -103,16 +103,16 @@ MODULE data_types
 
  ! hru info data structure
  type, public :: hru_info
-  integer(i4b)                      :: hru_nc                   ! index of the hru in the netcdf file
+  integer(i4b)                      :: hru_nc_ix                ! index of the hru in the netcdf file
   integer(i4b)                      :: hru_ix                   ! index of the hru in the run domain
-  integer(8)                        :: hru_id                   ! id (non-sequential number) of the hru
+  character(len=32)                 :: hru_id                   ! ID (label) of the hru
   integer(i4b)                      :: nSnow                    ! number of snow layers
   integer(i4b)                      :: nSoil                    ! number of soil layers
  endtype hru_info
 
  ! define mapping from GRUs to the HRUs
  type, public :: gru2hru_map
-  integer(8)                        :: gruId                    ! id of the gru
+  character(len=32)                 :: gruId                    ! ID (label) of the gru
   integer(i4b)                      :: hruCount                 ! total number of hrus in the gru
   type(hru_info), allocatable       :: hruInfo(:)               ! basic information of HRUs within the gru
  endtype gru2hru_map
@@ -140,6 +140,10 @@ MODULE data_types
  type, public :: i8length
   integer(8),allocatable              :: dat(:)    ! dat(:)
  endtype i8length
+ ! ** string type (len=32)
+ type, public :: c32length
+  character(len=32),allocatable       :: dat(:)    ! dat(:)
+ endtype c32length
  ! ** logical type
  type, public :: flagVec
   logical(lgt),allocatable            :: dat(:)    ! dat(:)
@@ -160,6 +164,10 @@ MODULE data_types
  type, public :: var_i8length
   type(i8length),allocatable          :: var(:)    ! var(:)%dat
  endtype var_i8length
+ ! ** character type of variable length
+ type, public :: var_c32length
+  type(c32length),allocatable         :: var(:)    ! var(:)%dat
+ endtype var_c32length
  ! ** logical type of variable length
  type, public :: var_flagVec
   type(flagVec),allocatable           :: var(:)    ! var(:)%dat
@@ -177,6 +185,10 @@ MODULE data_types
  type, public :: var_i8
   integer(8),allocatable              :: var(:)    ! var(:)
  endtype var_i8
+ ! ** character type of fixed length (len=32)
+ type, public :: var_c32
+  character(len=32),allocatable       :: var(:)    ! var(:)
+ endtype var_c32
 
  ! ** double precision type of fixed length
  type, public :: hru_d
@@ -190,6 +202,10 @@ MODULE data_types
  type, public :: hru_i8
   integer(8),allocatable              :: hru(:)    ! hru(:)
  endtype hru_i8
+ ! ** character type of fixed length (len=32)
+ type, public :: hru_c32
+  character(len=32),allocatable       :: hru(:)    ! hru(:)
+ endtype hru_c32
 
  ! define derived types to hold JUST the HRU dimension
  ! ** double precision type of variable length
@@ -204,6 +220,10 @@ MODULE data_types
  type, public :: hru_int8Vec
   type(var_i8length),allocatable     :: hru(:)     ! hru(:)%var(:)%dat
  endtype hru_int8Vec
+ ! ** character type of variable length
+ type, public :: hru_chr32Vec
+  type(var_c32length),allocatable    :: hru(:)     ! hru(:)%var(:)%dat
+ endtype hru_chr32Vec
  ! ** double precision type of fixed length
  type, public :: hru_double
   type(var_d),allocatable            :: hru(:)     ! hru(:)%var(:)
@@ -216,6 +236,10 @@ MODULE data_types
  type, public :: hru_int8
   type(var_i8),allocatable           :: hru(:)     ! hru(:)%var(:)
  endtype hru_int8
+ ! ** character type of fixed length (len=32)
+ type, public :: hru_chr32
+  type(var_c32),allocatable          :: hru(:)     ! hru(:)%var(:)
+ endtype hru_chr32
 
  ! define derived types to hold JUST the HRU dimension
  ! ** double precision type of variable length
@@ -226,10 +250,10 @@ MODULE data_types
  type, public :: gru_intVec
   type(var_ilength),allocatable      :: gru(:)     ! gru(:)%var(:)%dat
  endtype gru_intVec
- ! ** integer type of variable length (8 byte)
- type, public :: gru_int8Vec
-  type(var_i8length),allocatable     :: gru(:)     ! gru(:)%var(:)%dat
- endtype gru_int8Vec
+ ! ** character type of variable length (len=32)
+ type, public :: gru_chr32Vec
+  type(var_c32length),allocatable    :: gru(:)     ! gru(:)%var(:)%dat
+ endtype gru_chr32Vec
  ! ** double precision type of fixed length
  type, public :: gru_double
   type(var_d),allocatable            :: gru(:)     ! gru(:)%var(:)
@@ -242,6 +266,10 @@ MODULE data_types
  type, public :: gru_int8
   type(var_i8),allocatable           :: gru(:)     ! gru(:)%var(:)
  endtype gru_int8
+ ! ** character type of variable length
+ type, public :: gru_chr32
+  type(var_c32),allocatable          :: gru(:)     ! gru(:)%var(:)
+ endtype gru_chr32
 
  ! define derived types to hold BOTH the GRU and HRU dimension
  ! ** double precision type of variable length
@@ -256,6 +284,10 @@ MODULE data_types
  type, public :: gru_hru_int8Vec
   type(hru_int8Vec),allocatable      :: gru(:)     ! gru(:)%hru(:)%var(:)%dat
  endtype gru_hru_int8Vec
+ ! ** character type of variable length (len=32)
+ type, public :: gru_hru_chr32Vec
+  type(hru_chr32Vec),allocatable       :: gru(:)     ! gru(:)%hru(:)%var(:)%dat
+ endtype gru_hru_chr32Vec
  ! ** double precision type of fixed length
  type, public :: gru_hru_double
   type(hru_double),allocatable       :: gru(:)     ! gru(:)%hru(:)%var(:)
@@ -268,6 +300,10 @@ MODULE data_types
  type, public :: gru_hru_int8
   type(hru_int8),allocatable         :: gru(:)     ! gru(:)%hru(:)%var(:)
  endtype gru_hru_int8
+ ! ** character type of variable length
+ type, public :: gru_hru_chr32
+  type(hru_chr32),allocatable          :: gru(:)     ! gru(:)%hru(:)%var(:)
+ endtype gru_hru_chr32
 
 END MODULE data_types
 

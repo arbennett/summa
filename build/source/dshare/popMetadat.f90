@@ -93,7 +93,7 @@ contains
  ! -----
  ! * hru and gru ID data...
  ! ---------------------
- id_meta(iLookID%hruId)                      = var_info('hruId'         , 'ID defining the hydrologic response unit'   , '-', get_ixVarType('scalarv'), iMissVec, iMissVec, .false.)
+ id_meta(iLookID%hruId)                      = var_info('hruId'         , 'ID labeling the hydrologic response unit'   , '-', get_ixVarType('scalarv'), iMissVec, iMissVec, .false.)
 
  ! -----
  ! * site characteristics...

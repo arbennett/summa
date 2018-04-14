@@ -480,7 +480,7 @@ contains
    do iHRU=1,gru_struc(iGRU)%hruCount
 
     ! define global HRU
-    iHRU_global = gru_struc(iGRU)%hruInfo(iHRU)%hru_nc
+    iHRU_global = gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix
     iHRU_local  = (iHRU_global - ixHRUfile_min)+1
     !print*, 'iGRU, iHRU, iHRU_global, iHRU_local = ', iGRU, iHRU, iHRU_global, iHRU_local
 

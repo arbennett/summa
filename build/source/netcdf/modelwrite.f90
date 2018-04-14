@@ -41,6 +41,7 @@ USE data_types,only:&
                     ! no spatial dimension
                     var_i,               & ! x%var(:)            (i4b)
                     var_i8,              & ! x%var(:)            integer(8)
+                    var_c32,             & ! x%var(:)            char(32)
                     var_d,               & ! x%var(:)            (dp)
                     var_ilength,         & ! x%var(:)%dat        (i4b)
                     var_dlength,         & ! x%var(:)%dat        (dp)
@@ -55,6 +56,7 @@ USE data_types,only:&
                     ! gru+hru dimension
                     gru_hru_int,         & ! x%gru(:)%hru(:)%var(:)     (i4b)
                     gru_hru_int8,        & ! x%gru(:)%hru(:)%var(:)     integer(8)
+                    gru_hru_chr32,       & ! x%gru(:)%hru(:)%var(:)     char(32)
                     gru_hru_double,      & ! x%gru(:)%hru(:)%var(:)     (dp)
                     gru_hru_intVec,      & ! x%gru(:)%hru(:)%var(:)%dat (i4b)
                     gru_hru_doubleVec      ! x%gru(:)%hru(:)%var(:)%dat (dp)
@@ -104,13 +106,16 @@ contains
 
   ! initialize message
   message=trim(message)//trim(meta(iVar)%varName)//'/'
+  print*, 'writing ',trim(meta(iVar)%varName)
 
-  ! HRU data
+  ! HRU-based data
   if (iSpatial/=integerMissing) then
    select type (struct)
     class is (var_i)
      err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
     class is (var_i8)
+     err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
+    class is (var_c32)
      err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
     class is (var_d)
      err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
@@ -120,12 +125,14 @@ contains
    end select
    call netcdf_err(err,message); if (err/=0) return
 
-  ! GRU data
+  ! GRU-based data
   else
    select type (struct)
     class is (var_d)
      err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/1/),count=(/1/))
     class is (var_i8)
+     err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/1/),count=(/1/))
+    class is (var_c32)
      err = nf90_put_var(ncid(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/1/),count=(/1/))
     class default; err=20; message=trim(message)//'unknown variable type (no HRU)'; return
    end select

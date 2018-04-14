@@ -141,8 +141,8 @@ contains
   do iStruct = 1,size(structInfo)
    select case (trim(structInfo(iStruct)%structName))
     case('attr' ); call def_variab(ncid(iFreq),iFreq,needHRU,  noTime,attr_meta, nf90_double,err,cmessage)  ! local attributes HRU
-    case('type' ); call def_variab(ncid(iFreq),iFreq,needHRU,  noTime,type_meta, nf90_int,   err,cmessage)  ! local classification
-    case('id' );   call def_variab(ncid(iFreq),iFreq,needHRU,  noTime,id_meta,   nf90_int64, err,cmessage)  ! local classification
+    case('type' ); call def_variab(ncid(iFreq),iFreq,needHRU,  noTime,type_meta, nf90_int,   err,cmessage)  ! local type classification
+    case(  'id' ); call def_variab(ncid(iFreq),iFreq,needHRU,  noTime,  id_meta, nf90_int64, err,cmessage)  ! hruId labels
     case('mpar' ); call def_variab(ncid(iFreq),iFreq,needHRU,  noTime,mpar_meta, nf90_double,err,cmessage)  ! model parameters
     case('bpar' ); call def_variab(ncid(iFreq),iFreq,needGRU,  noTime,bpar_meta, nf90_double,err,cmessage)  ! basin-average param
     case('indx' ); call def_variab(ncid(iFreq),iFreq,needHRU,needTime,indx_meta, nf90_int,   err,cmessage)  ! model variables
@@ -339,7 +339,7 @@ contains
   ! define statistics index
   iStat = metaData(iVar)%statIndex(iFreq)
 
-  ! create full variable name (append statistics info(
+  ! create full variable name (append statistics info)
   if(iStat==iLookStat%inst)then
    catName = trim(metaData(iVar)%varName)
   else
@@ -425,7 +425,7 @@ contains
  ! write the HRU dimension to record position in the input netcdf file for concatenation of outputs of a parallelized run.
  do iGRU = 1, size(gru_struc)
   do iHRU = 1, gru_struc(iGRU)%hruCount
-   err = nf90_put_var(ncid, hruVarID, gru_struc(iGRU)%hruInfo(iHRU)%hru_nc, start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_ix/))
+   err = nf90_put_var(ncid, hruVarID, gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix, start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_ix/))
    if (err/=nf90_NoErr) then; message=trim(message)//'nf90_write_hruVar'; call netcdf_err(err,message); return; end if
   end do
  end do

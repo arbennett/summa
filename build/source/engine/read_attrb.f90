@@ -53,9 +53,13 @@ contains
  integer(i4b)                         :: sGRU               ! starting GRU
  integer(i4b)                         :: iHRU               ! HRU couinting index
  integer(i4b)                         :: iGRU               ! GRU loop index
- integer(8),allocatable               :: gru_id(:),hru_id(:)! read gru/hru IDs in from attributes file
- integer(8),allocatable               :: hru2gru_id(:)      ! read hru->gru mapping in from attributes file
+ character(len=32),allocatable        :: gru_id(:),hru_id(:)! read gru/hru IDs in from attributes file
+ character(len=32),allocatable        :: hru2gru_id(:)      ! read hru->gru mapping in from attributes file
  integer(i4b),allocatable             :: hru_ix(:)          ! hru index for search
+
+ integer(i4b)                         :: varXtype           ! tmp variable for inquiring about netcdf variable type (xtype)
+ integer(i4b),allocatable             :: tmpIntVec(:)       ! tmp vector to hold IDs read from file before conv. to string         
+ integer(8),allocatable               :: tmpInt8Vec(:)      ! tmp vector to hold IDs read from file before conv. to string         
 
  ! define variables for NetCDF file operation
  integer(i4b)                         :: ncID               ! NetCDF file ID
@@ -107,17 +111,94 @@ contains
  allocate(gru_id(fileGRU))
  allocate(hru_ix(fileHRU),hru_id(fileHRU),hru2gru_id(fileHRU))
 
- ! read gru_id from netcdf file
- err = nf90_inq_varid(ncID,"gruId",varID);     if (err/=0) then; message=trim(message)//'problem finding gruId'; return; end if
- err = nf90_get_var(ncID,varID,gru_id);        if (err/=0) then; message=trim(message)//'problem reading gruId'; return; end if
+ ! IDs in attribute file may be int, int64 or string.  Check type before reading, and convert to SUMMA internal type (string)
+ ! see type codes in netcdf header file, eg www.unidata.ucar.edu/software/netcdf/docs/netcdf_8h_source.html
+ !   eg: NC_INT=4, NC_INT64=10, NC_STRING=12 
+ ! (this can all be simplified if SUMMA opts to require IDs as strings)
 
+ ! read gru_id from netcdf file
+ err = nf90_inq_varid(ncID,"gruId",varID);         if (err/=0) then; message=trim(message)//'problem finding gruId'; return; end if
+ err = nf90_inquire_variable(ncID,varID,xtype=varXtype);  if (err/=0) then; message=trim(message)//'problem finding gruId type'; return; end if
+
+ if (varXtype==4) then
+   allocate(tmpIntVec(fileGRU))
+   err = nf90_get_var(ncID,varID,tmpIntVec);       if (err/=0) then; message=trim(message)//'problem reading gruId as int'; return; end if
+
+   do iGRU = 1,fileGRU
+     write(gru_id(iGRU), *) tmpIntVec(iGRU)        ! convert to string (not a vector operation unfortunately)
+   end do
+   deallocate(tmpIntVec)
+
+ elseif (varXtype==10) then
+   allocate(tmpInt8Vec(fileGRU))
+   err = nf90_get_var(ncID,varID,tmpInt8Vec);      if (err/=0) then; message=trim(message)//'problem reading gruId as int64'; return; end if
+   do iGRU = 1,fileGRU
+     write(gru_id(iGRU), *) tmpInt8Vec(iGRU)       ! convert to string (not a vector operation unfortunately)
+   end do
+   deallocate(tmpInt8Vec)
+
+ elseif (varXtype==12) then
+   err = nf90_get_var(ncID,varID,gru_id);          if (err/=0) then; message=trim(message)//'problem reading gruId as string'; return; end if
+
+ else
+   print*, trim(message)//'gruId type=',varXtype,' not found'; stop
+ end if
+ !print*, 'first gruId: ',gru_id(1)
+ 
  ! read hru_id from netcdf file
- err = nf90_inq_varid(ncID,"hruId",varID);     if (err/=0) then; message=trim(message)//'problem finding hruId'; return; end if
- err = nf90_get_var(ncID,varID,hru_id);        if (err/=0) then; message=trim(message)//'problem reading hruId'; return; end if
+ err = nf90_inq_varid(ncID,"hruId",varID);                if (err/=0) then; message=trim(message)//'problem finding hruId'; return; end if
+ err = nf90_inquire_variable(ncID,varID,xtype=varXtype);  if (err/=0) then; message=trim(message)//'problem finding hruId type'; return; end if
+
+ if (varXtype==4) then
+   allocate(tmpIntVec(fileHRU))
+   err = nf90_get_var(ncID,varID,tmpIntVec);       if (err/=0) then; message=trim(message)//'problem reading hruId as int'; return; end if
+   do iHRU = 1,fileHRU
+     write(hru_id(iHRU), *) tmpIntVec(iHRU)        ! convert to string (not a vector operation unfortunately)
+   end do
+   deallocate(tmpIntVec)
+
+ elseif (varXtype==10) then
+   allocate(tmpInt8Vec(fileHRU))
+   err = nf90_get_var(ncID,varID,tmpInt8Vec);      if (err/=0) then; message=trim(message)//'problem reading hruId as int64'; return; end if
+   do iHRU = 1,fileHRU
+     write(hru_id(iHRU), *) tmpInt8Vec(iHRU)       ! convert to string
+   end do
+   deallocate(tmpInt8Vec)
+
+ elseif (varXtype==12) then
+   err = nf90_get_var(ncID,varID,hru_id);          if (err/=0) then; message=trim(message)//'problem reading hruId as string'; return; end if
+ else
+   print*, trim(message)//'hruId type=',varXtype,' not found'; stop
+ end if
+ !print*, 'first hruId: ', hru_id(1)
 
  ! read hru2gru_id from netcdf file
- err = nf90_inq_varid(ncID,"hru2gruId",varID); if (err/=0) then; message=trim(message)//'problem finding hru2gruId'; return; end if
- err = nf90_get_var(ncID,varID,hru2gru_id);    if (err/=0) then; message=trim(message)//'problem reading hru2gruId'; return; end if
+ err = nf90_inq_varid(ncID,"hru2gruId",varID);     if (err/=0) then; message=trim(message)//'problem finding hru2gruId'; return; end if
+ err = nf90_inquire_variable(ncID,varID,xtype=varXtype);  if (err/=0) then; message=trim(message)//'problem finding hru2gruId type'; return; end if
+
+ !print*,'hru_id varXtype=',varXtype
+ if (varXtype==4) then
+   allocate(tmpIntVec(fileHRU))
+   err = nf90_get_var(ncID,varID,tmpIntVec);       if (err/=0) then; message=trim(message)//'problem reading hru2gruId as int'; return; end if
+   do iHRU = 1,fileHRU
+     write(hru2gru_id(iHRU), *) tmpIntVec(iHRU)     ! convert to string
+   end do
+   deallocate(tmpIntVec)
+
+ elseif (varXtype==10) then
+   allocate(tmpInt8Vec(fileHRU))
+   err = nf90_get_var(ncID,varID,tmpInt8Vec);      if (err/=0) then; message=trim(message)//'problem reading hru2gruId as int64'; return; end if
+   do iHRU = 1,fileHRU
+     write(hru2gru_id(iHRU), *) tmpInt8Vec(iHRU)   ! convert to string
+   end do
+   deallocate(tmpInt8Vec)
+
+ elseif (varXtype==12) then
+   err = nf90_get_var(ncID,varID,hru2gru_id);      if (err/=0) then; message=trim(message)//'problem reading hru2gruId as string'; return; end if
+ else
+   print*, trim(message)//'hru2gruId type=', varXtype, ' not found'; stop
+ end if
+ !print*, 'first hru2gruId: ', hru2gru_id(1)
 
  ! close netcdf file
  call nc_file_close(ncID,err,cmessage)
@@ -141,7 +222,7 @@ if (present(checkHRU)) then                                                     
  gru_struc(iGRU)%hruCount             = 1                                                      ! number of HRUs in each GRU
  gru_struc(iGRU)%gruId                = hru2gru_id(checkHRU)                                   ! set gru id
  allocate(gru_struc(iGRU)%hruInfo(gru_struc(iGRU)%hruCount))                                   ! allocate second level of gru to hru map
- gru_struc(iGRU)%hruInfo(iGRU)%hru_nc = checkHRU                                               ! set hru id in attributes netcdf file
+ gru_struc(iGRU)%hruInfo(iGRU)%hru_nc_ix = checkHRU                                            ! set hru id index in attributes netcdf file
  gru_struc(iGRU)%hruInfo(iGRU)%hru_ix = 1                                                      ! set index of hru in run domain
  gru_struc(iGRU)%hruInfo(iGRU)%hru_id = hru_id(checkHRU)                                       ! set id of hru
 
@@ -154,9 +235,9 @@ else ! allocate space for anything except a single HRU run
   gru_struc(iGRU)%hruCount          = count(hru2gru_Id == gru_id(iGRU+sGRU-1))                 ! number of HRUs in each GRU
   gru_struc(iGRU)%gruId             = gru_id(iGRU+sGRU-1)                                      ! set gru id
   allocate(gru_struc(iGRU)%hruInfo(gru_struc(iGRU)%hruCount))                                  ! allocate second level of gru to hru map
-  gru_struc(iGRU)%hruInfo(:)%hru_nc = pack(hru_ix,hru2gru_id == gru_struc(iGRU)%gruId)         ! set hru id in attributes netcdf file
+  gru_struc(iGRU)%hruInfo(:)%hru_nc_ix = pack(hru_ix,hru2gru_id == gru_struc(iGRU)%gruId)      ! set hru id index in attributes netcdf file
   gru_struc(iGRU)%hruInfo(:)%hru_ix = arth(iHRU,1,gru_struc(iGRU)%hruCount)                    ! set index of hru in run domain
-  gru_struc(iGRU)%hruInfo(:)%hru_id = hru_id(gru_struc(iGRU)%hruInfo(:)%hru_nc)                ! set id of hru
+  gru_struc(iGRU)%hruInfo(:)%hru_id = hru_id(gru_struc(iGRU)%hruInfo(:)%hru_nc_ix)             ! set hru id
   iHRU = iHRU + gru_struc(iGRU)%hruCount
  enddo ! iGRU = 1,nGRU
 
@@ -185,7 +266,7 @@ end subroutine read_dimension
  ! ************************************************************************************************
  ! public subroutine read_attrb: read information on local attributes
  ! ************************************************************************************************
- subroutine read_attrb(attrFile,nGRU,attrStruct,typeStruct,idStruct,err,message)
+ subroutine read_attrb(attrFile,nGRU,fileHRU,attrStruct,typeStruct,idStruct,err,message)
  ! provide access to subroutines
  USE netcdf
  USE netcdf_util_module,only:nc_file_open                   ! open netcdf file
@@ -193,7 +274,7 @@ end subroutine read_dimension
  USE netcdf_util_module,only:netcdf_err                     ! netcdf error handling function
  ! provide access to derived data types
  USE data_types,only:gru_hru_int                            ! x%gru(:)%hru(:)%var(:)     (i4b)
- USE data_types,only:gru_hru_int8                           ! x%gru(:)%hru(:)%var(:)     integer(8)
+ USE data_types,only:gru_hru_chr32                          ! x%gru(:)%hru(:)%var(:)     string
  USE data_types,only:gru_hru_double                         ! x%gru(:)%hru(:)%var(:)     (dp)
  ! provide access to global data
  USE globalData,only:gru_struc                              ! gru-hru mapping structure
@@ -203,10 +284,10 @@ end subroutine read_dimension
 
  ! io vars
  character(*)                         :: attrFile           ! input filename
- integer(i4b),intent(in)              :: nGRU               ! number of grouped response units
+ integer(i4b),intent(in)              :: nGRU,fileHRU       ! number of run grouped response units and global number of HRUs in netcdf file
  type(gru_hru_double),intent(inout)   :: attrStruct         ! local attributes for each HRU
  type(gru_hru_int),intent(inout)      :: typeStruct         ! local classification of soil veg etc. for each HRU
- type(gru_hru_int8),intent(inout)     :: idStruct           ! local classification of hru and gru IDs
+ type(gru_hru_chr32),intent(inout)    :: idStruct           ! local classification of hru and gru IDs
  integer(i4b),intent(out)             :: err                ! error code
  character(*),intent(out)             :: message            ! error message
 
@@ -215,8 +296,9 @@ end subroutine read_dimension
  integer(i4b)                         :: iVar               ! loop through varibles in the netcdf file
  integer(i4b)                         :: iHRU               ! index of an HRU within a GRU
  integer(i4b)                         :: iGRU               ! index of an GRU
- integer(i4b)                         :: varType            ! type of variable (categorica, numerical, idrelated)
+ !integer(i4b)                        :: varType            ! type of variable (categorica, numerical, idrelated) -- not used
  integer(i4b)                         :: varIndx            ! index of variable within its data structure
+ integer(i4b)                         :: varXtype           ! tmp variable for inquiring about netcdf variable type (xtype)
 
  ! check structures
  integer(i4b)                         :: iCheck             ! index of an attribute name
@@ -228,12 +310,14 @@ end subroutine read_dimension
  integer(i4b)                         :: ncID               ! netcdf file id
  character(LEN=nf90_max_name)         :: varName            ! character array of netcdf variable name
  integer(i4b)                         :: nVar               ! number of variables in netcdf local attribute file
- integer(i4b),parameter               :: categorical=101    ! named variable to denote categorical data
- integer(i4b),parameter               :: numerical=102      ! named variable to denote numerical data
- integer(i4b),parameter               :: idrelated=103      ! named variable to denote ID related data
+ !integer(i4b),parameter               :: categorical=101    ! named variable to denote categorical data -- not used
+ !integer(i4b),parameter               :: numerical=102      ! named variable to denote numerical data -- not used
+ !integer(i4b),parameter               :: idrelated=103      ! named variable to denote ID related data -- not used
  integer(i4b)                         :: categorical_var(1) ! temporary categorical variable from local attributes netcdf file
  real(dp)                             :: numeric_var(1)     ! temporary numeric variable from local attributes netcdf file
- integer(8)                           :: idrelated_var(1)   ! temporary ID related variable from local attributes netcdf file
+ integer(i4b),allocatable             :: id_int_vec(:)      ! temporary ID variables from local attributes netcdf file
+ integer(8),allocatable               :: id_int8_vec(:)     ! temporary ID variables from local attributes netcdf file
+ character(len=32),allocatable        :: id_str_vec(:)      ! temporary ID variables from local attributes netcdf file
 
  ! define mapping variables
 
@@ -278,7 +362,7 @@ end subroutine read_dimension
    case('vegTypeIndex','soilTypeIndex','slopeTypeIndex','downHRUindex')
 
     ! get the index of the variable
-    varType = categorical
+    !varType = categorical -- not used
     varIndx = get_ixType(varName)
     checkType(varIndx) = .true.
 
@@ -288,7 +372,7 @@ end subroutine read_dimension
     ! get data from netcdf file and store in vector
     do iGRU=1,nGRU
      do iHRU = 1,gru_struc(iGRU)%hruCount
-      err = nf90_get_var(ncID,iVar,categorical_var,start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_nc/),count=(/1/))
+      err = nf90_get_var(ncID,iVar,categorical_var,start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix/),count=(/1/))
       if(err/=nf90_noerr)then; message=trim(message)//'problem reading: '//trim(varName); return; end if
       typeStruct%gru(iGRU)%hru(iHRU)%var(varIndx) = categorical_var(1)
      end do
@@ -297,27 +381,65 @@ end subroutine read_dimension
    ! ** ID related data
    case('hruId')
     ! get the index of the variable
-    varType = idrelated
+    !varType = idrelated -- not used
     varIndx = get_ixId(varName)
     checkId(varIndx) = .true.
 
     ! check that the variable could be identified in the data structure
     if(varIndx < 1)then; err=20; message=trim(message)//'unable to find variable ['//trim(varName)//'] in data structure'; return; endif
 
-    ! get data from netcdf file and store in vector
+    ! create space for vector of ID strings (all in netcdf file)
+    ! [if switching to the block read approach for all other attributes, do these allocations up top]
+    allocate(id_str_vec(fileHRU))           
+
+    ! check ID type (int, int64, string, ...)
+    err = nf90_inquire_variable(ncID,iVar,xtype=varXtype);  if (err/=0) then; message=trim(message)//'cannot find hruId type'; return; end if
+
+    if (varXtype==4) then
+      ! reading IDs as ints
+      allocate(id_int_vec(fileHRU))
+      err = nf90_get_var(ncID,iVar,id_int_vec,start=(/1/), count=(/fileHRU/))
+      if(err/=nf90_noerr)then; message=trim(message)//'problem reading ints: '//trim(varName); return; end if
+      ! convert int IDs from netcdf file into strings
+      do iHRU=1,fileHRU
+        write(id_str_vec(iHRU),*) id_int_vec(iHRU)
+      end do
+      deallocate(id_int_vec)
+
+    else if (varXtype==10) then
+      ! get int64 IDs from netcdf file
+      allocate(id_int8_vec(fileHRU))
+      err = nf90_get_var(ncID,iVar,id_int8_vec,start=(/1/), count=(/fileHRU/))
+      if(err/=nf90_noerr)then; message=trim(message)//'problem reading int64s: '//trim(varName); return; end if
+      ! convert int IDs from netcdf file into strings
+      do iHRU=1,fileHRU
+        write(id_str_vec(iHRU),*) id_int8_vec(iHRU)
+      end do
+      deallocate(id_int8_vec)
+
+    else if (varXtype==12) then
+      ! get string IDs from netcdf file and store in vector
+      err = nf90_get_var(ncID,iVar,id_str_vec,start=(/1/), count=(/fileHRU/))
+      if(err/=nf90_noerr)then; message=trim(message)//'problem reading strings: '//trim(varName); return; end if
+
+    else 
+      print*, trim(message)//'hruId type=',varXtype,' not found in attribute file'; stop
+
+    end if ! end if condition block to handle different types of Ids in attribute files
+
+    ! store string IDs in array structure by gru & hru
     do iGRU=1,nGRU
      do iHRU = 1,gru_struc(iGRU)%hruCount
-      err = nf90_get_var(ncID,iVar,idrelated_var,start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_nc/),count=(/1/))
-      if(err/=nf90_noerr)then; message=trim(message)//'problem reading: '//trim(varName); return; end if
-      idStruct%gru(iGRU)%hru(iHRU)%var(varIndx) = idrelated_var(1)
+      idStruct%gru(iGRU)%hru(iHRU)%var(varIndx) = trim(id_str_vec(gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix))
      end do
     end do
+    deallocate(id_str_vec)
 
    ! ** numerical data
    case('latitude','longitude','elevation','tan_slope','contourLength','HRUarea','mHeight')
 
     ! get the index of the variable
-    varType = numerical
+    !varType = numerical -- not used
     varIndx = get_ixAttr(varName)
     checkAttr(varIndx) = .true.
 
@@ -327,13 +449,13 @@ end subroutine read_dimension
     ! get data from netcdf file and store in vector
     do iGRU=1,nGRU
      do iHRU = 1, gru_struc(iGRU)%hruCount
-      err = nf90_get_var(ncID,iVar,numeric_var,start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_nc/),count=(/1/))
+      err = nf90_get_var(ncID,iVar,numeric_var,start=(/gru_struc(iGRU)%hruInfo(iHRU)%hru_nc_ix/),count=(/1/))
       if(err/=nf90_noerr)then; message=trim(message)//'problem reading: '//trim(varName); return; end if
       attrStruct%gru(iGRU)%hru(iHRU)%var(varIndx) = numeric_var(1)
      end do
     end do
 
-   ! for mapping varibles, do nothing (information read above)
+   ! for mapping variables, do nothing (information read above)
    case('hru2gruId','gruId'); cycle
 
    ! check that variables are what we expect

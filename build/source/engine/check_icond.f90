@@ -75,9 +75,9 @@ contains
  character(*)           ,intent(out)   :: message        ! returned error message
 
  ! locals
- character(len=256)                     :: cmessage      ! downstream error message
- integer(i4b)                           :: iGRU          ! loop index
- integer(i4b)                           :: iHRU          ! loop index
+ character(len=256)                    :: cmessage       ! downstream error message
+ integer(i4b)                          :: iGRU           ! loop index
+ integer(i4b)                          :: iHRU           ! loop index
 
  ! temporary variables for realism checks
  integer(i4b)                      :: iLayer             ! index of model layer
