@@ -114,7 +114,8 @@ ifeq "$(isOpenMP)" "yes"
  LIBOPENMP = -lgomp
 endif
 
-NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/7.1.0
+#NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/7.1.0
+NCDF_PATH = ${NETCDF}
 LIBLAPACK = ${NCAR_LIBS_NETLIB}
 endif
 
@@ -326,18 +327,18 @@ MODRUN = $(patsubst %, $(ENGINE_DIR)/%, $(SUMMA_MODRUN))
 SUMMA_MSOLVE = \
 
 # Define NetCDF routines
-SUMMA_NETCDF = \
+SUMMA_NCDF = \
 		netcdf_util.f90 \
 		def_output.f90 \
 		modelwrite.f90 \
 		read_icond.f90
-NETCDF = $(patsubst %, $(NETCDF_DIR)/%, $(SUMMA_NETCDF))
+NCDF = $(patsubst %, $(NETCDF_DIR)/%, $(SUMMA_NCDF))
 
 # ... stitch together common programs
 COMM_ALL = $(NRUTIL) $(NRPROC) $(HOOKUP) $(DATAMS) $(UTILMS)
 
 # ... stitch together SUMMA programs
-SUMMA_ALL = $(NETCDF) $(PRELIM) $(MODRUN) $(SOLVER)
+SUMMA_ALL = $(NCDF) $(PRELIM) $(MODRUN) $(SOLVER)
 
 # Define the driver routine
 SUMMA_DRIVER= \
