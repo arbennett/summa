@@ -1,5 +1,5 @@
 module bmi_summa
-    
+
     use nrtype                                                  ! variable types, etc.
     use netcdf                                                  ! netcdf libraries
     ! provide access to subroutines and functions
@@ -90,7 +90,7 @@ module bmi_summa
     use globalData, only: gru_struc                                     ! gru-hru mapping structures
     use globalData, only: localParFallback                              ! local column default parameters
     use globalData, only: basinParFallback                              ! basin-average default parameters
-    use globalData, only: structInfo                                    ! information on the data structures                  
+    use globalData, only: structInfo                                    ! information on the data structures
     use globalData, only: numtim                                        ! number of time steps
     use globalData, only: urbanVegCategory                              ! vegetation category for urban areas
     use globalData, only: globalPrintFlag                               ! global print flag
@@ -99,8 +99,8 @@ module bmi_summa
     use NOAHMP_VEG_PARAMETERS,  only: SAIM, LAIM                            ! 2-d tables for stem area index and leaf area index (vegType,month)
     use NOAHMP_VEG_PARAMETERS,  only: HVT, HVB                              ! height at the top and bottom of vegetation (vegType)
     use noahmp_globals,         only: RSMIN                                 ! minimum stomatal resistance (vegType)
-    use var_lookup,             only: maxvarForc, maxvarProg, maxvarDiag    ! size of variable vectors 
-    use var_lookup,             only: maxvarFlux, maxvarIndx, maxvarBvar    ! size of variable vectors 
+    use var_lookup,             only: maxvarForc, maxvarProg, maxvarDiag    ! size of variable vectors
+    use var_lookup,             only: maxvarFlux, maxvarIndx, maxvarBvar    ! size of variable vectors
     ! provide access to the named variables that describe elements of parent model structures
     use var_lookup, only: iLookTIME, iLookFORCE                         ! look-up values for time and forcing data structures
     use var_lookup, only: iLookTYPE                                     ! look-up values for classification of veg, soils etc.
@@ -108,8 +108,8 @@ module bmi_summa
     use var_lookup, only: iLookPARAM                                    ! look-up values for local column model parameters
     use var_lookup, only: iLookINDEX                                    ! look-up values for local column index variables
     use var_lookup, only: iLookPROG                                     ! look-up values for local column model prognostic (state) variables
-    use var_lookup, only: iLookDIAG                                     ! look-up values for local column model diagnostic variables 
-    use var_lookup, only: iLookFLUX                                     ! look-up values for local column model fluxes 
+    use var_lookup, only: iLookDIAG                                     ! look-up values for local column model diagnostic variables
+    use var_lookup, only: iLookFLUX                                     ! look-up values for local column model fluxes
     use var_lookup, only: iLookBVAR                                     ! look-up values for basin-average model variables
     use var_lookup, only: iLookBPAR                                     ! look-up values for basin-average model parameters
     use var_lookup, only: iLookDECISIONS                                ! look-up values for model decisions
@@ -228,11 +228,11 @@ implicit none
     integer(i4b)                     :: nLayers                    ! total number of layers
     integer(i4b),parameter           :: no=0                       ! .false.
     integer(i4b),parameter           :: yes=1                      ! .true.
-    logical(lgt)                     :: computeVegFluxFlag         ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow) 
-    type(hru_i),allocatable          :: computeVegFlux(:)          ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow) 
+    logical(lgt)                     :: computeVegFluxFlag         ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
+    type(hru_i),allocatable          :: computeVegFlux(:)          ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
     type(hru_d),allocatable          :: dt_init(:)                 ! used to initialize the length of the sub-step for each HRU
-    type(hru_d),allocatable          :: upArea(:)                  ! area upslope of each HRU 
-    ! general local variables        
+    type(hru_d),allocatable          :: upArea(:)                  ! area upslope of each HRU
+    ! general local variables
     integer(i4b)                     :: ivar                       ! index of model variable
     real(dp)                         :: fracHRU                    ! fractional area of a given HRU (-)
     logical(lgt)                     :: flux_mask(maxvarFlux)      ! mask defining desired flux variables
@@ -247,7 +247,7 @@ implicit none
     ! error control
     integer(i4b)                     :: err=0                      ! error code
     character(len=1024)              :: message=''                 ! error message
-    ! output control 
+    ! output control
     integer(i4b)                     :: iFreq                      ! index for looping through output files
     logical(lgt)                     :: statForc_mask(maxvarForc)  ! mask defining forc stats
     logical(lgt)                     :: statProg_mask(maxvarProg)  ! mask defining prog stats
@@ -261,12 +261,12 @@ implicit none
     integer(i4b),allocatable         :: fluxChild_map(:)           ! index of the child data structure: stats flux
     integer(i4b),allocatable         :: indxChild_map(:)           ! index of the child data structure: stats indx
     integer(i4b),allocatable         :: bvarChild_map(:)           ! index of the child data structure: stats bvar
-    type(extended_info),allocatable  :: statForc_meta(:)           ! child metadata for stats 
-    type(extended_info),allocatable  :: statProg_meta(:)           ! child metadata for stats 
-    type(extended_info),allocatable  :: statDiag_meta(:)           ! child metadata for stats 
-    type(extended_info),allocatable  :: statFlux_meta(:)           ! child metadata for stats 
-    type(extended_info),allocatable  :: statIndx_meta(:)           ! child metadata for stats 
-    type(extended_info),allocatable  :: statBvar_meta(:)           ! child metadata for stats 
+    type(extended_info),allocatable  :: statForc_meta(:)           ! child metadata for stats
+    type(extended_info),allocatable  :: statProg_meta(:)           ! child metadata for stats
+    type(extended_info),allocatable  :: statDiag_meta(:)           ! child metadata for stats
+    type(extended_info),allocatable  :: statFlux_meta(:)           ! child metadata for stats
+    type(extended_info),allocatable  :: statIndx_meta(:)           ! child metadata for stats
+    type(extended_info),allocatable  :: statBvar_meta(:)           ! child metadata for stats
     ! stuff for restart file
     character(len=256)               :: timeString                 ! protion of restart file name that contains the write-out time
     character(len=256)               :: restartFile                ! restart file name
@@ -279,6 +279,60 @@ implicit none
     integer(i4b)                     :: iRunMode                   ! define the current running mode
     character(len=128)               :: fmtGruOutput               ! a format string used to write start and end GRU in output file names
 
+
     contains
+
+
+    function get_summa_time() result(ret) bind(c, name="get_summa_time")
+    end function get_summa_time
+
+
+    function get_end_time() result(ret) bind(c, name="get_summa_end_time")
+    end function get_end_time
+
+
+    function get_time_step() result(ret) bind(c, name="get_summa_time_step")
+    end function get_time_step
+
+
+    function convert_summa_time(idate) result(ret)
+    end function convert_summa_time
+
+
+    function get_num_output_fields() result(ret) bind(c, name="get_num_ovars")
+    end function get_num_output_fields
+
+
+    subroutine get_output_name(index, dest) bind(c, name="get_ovar_name")
+    end subroutine get_output_name
+
+
+    subroutine get_output_units(index, dest) bind(c, name="get_ovar_units")
+    end subroutine get_output_units
+
+
+    function get_num_subbasins() result(ret) bind(c, name="get_num_basins")
+    end function get_num_subbasins
+
+
+    subroutine get_latlons(targetlatarr, targetlonarr) bind(c, name="get_latlons")
+    end subroutine get_latlons
+
+
+    subroutine get_basin_field(index, targetarr) bind(c, name="get_ovar_values")
+    end subroutine get_basin_field
+
+
+    function initialize(dir, iseq) result(istat) bind(c, name="init_summa")
+    end function initialize
+
+
+    function update() result(istat) bind(c, name="update_summa")
+    end function update
+
+
+    function finalize() result(istat) bind(c, name="finalize_summa")
+    end function finalize
+
 
 end module bmi_summa
