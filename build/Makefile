@@ -7,28 +7,36 @@
 # At a minimum you will need to set F_MASTER and FC. You will probably
 # also have to specify the location of your netcdf and lapack libraries
 
+# on cheyenne, first need to use:  module load gnu, then lapack
+
 #========================================================================
 # PART 0: User-configurable part
 #========================================================================
 
 # Define core directory below which everything resides. This is the
 # parent directory of the 'build' directory
-##F_MASTER =
+F_MASTER = /glade/u/home/andywood/proj/SHARP/models/summa/
 
 # Define the Fortran Compiler. If you are using gfortran, then this needs
 # to be version 6 or higher. This variable is simply used to select the right
 # compiler flags in the ifeq statements in this Makefile. The compiler
 # executable is set separately as FC_EXE
-##FC =
+FC = gfortran
+#FC = ifort
 
 # Define the path for the compiler executable. This is the actual executable
 # that is invoked. For example, FC=gfortran and FC_EXE=/usr/bin-gfortran-mp-6
 # FC and FC_EXE have to be consistent
-##FC_EXE =
+FC_EXE = gfortran
+#FC_EXE = ifort
 
 # Define the compiler environment. This is used in the ifeq statements in this
 # Makefile to set the include and library paths and the libraries
 ##FC_ENV =
+FC_ENV = gfortran-cheyenne
+#FC_ENV = gfortran
+#FC_ENV = ifort
+
 
 # Define the NetCDF and LAPACK libraries and path to include files. Note
 # that the default paths defined are those that work for our compilers
@@ -63,13 +71,13 @@ ifeq "$(isOpenMP)" "yes"
  FLAGS_OMP = -fopenmp
 endif
 
-FLAGS_NOAH = -O3 -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
-FLAGS_COMM = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
-FLAGS_SUMMA = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
+#FLAGS_NOAH = -O3 -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
+#FLAGS_COMM = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
+#FLAGS_SUMMA = -O3 -ffree-line-length-none -fmax-errors=0 $(FLAGS_OMP)
 
-#FLAGS_NOAH = -p -g -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 -fbacktrace -Wno-unused -Wno-unused-dummy-argument
-#FLAGS_COMM = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
-#FLAGS_SUMMA = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
+FLAGS_NOAH = -p -g -ffree-form -fdefault-real-8 -ffree-line-length-none -fmax-errors=0 -fbacktrace -Wno-unused -Wno-unused-dummy-argument
+FLAGS_COMM = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
+FLAGS_SUMMA = -p -g -Wall -ffree-line-length-none -fmax-errors=0 -fbacktrace -fcheck=bounds
 
 endif
 
@@ -106,7 +114,8 @@ ifeq "$(isOpenMP)" "yes"
  LIBOPENMP = -lgomp
 endif
 
-NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/7.1.0
+#NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/7.1.0
+NCDF_PATH = ${NETCDF}
 LIBLAPACK = ${NCAR_LIBS_NETLIB}
 endif
 
@@ -143,14 +152,19 @@ ifeq "$(isOpenMP)" "yes"
  LIBOPENMP = -liomp5
 endif
 
+# on hydro-c1
 #NCDF_PATH = /opt/netcdf4-intel
 #LAPK_PATH = /usr
+
+# on cheyenne
 NCDF_PATH = /glade/u/apps/ch/opt/netcdf/4.4.1.1/intel/17.0.1
 LAPK_PATH = /glade/u/apps/opt/intel/2017u1/compilers_and_libraries/linux/mkl/lib/intel64
 
 # define the lapack libraries
-#LIBLAPACK = -L$(LAPK_PATH)/lib -llapack
-LIBLAPACK = $(NCAR_LIBS_MKL)
+# hydro-c1
+LIBLAPACK = -L$(LAPK_PATH)/lib -llapack
+# cheyenne
+#LIBLAPACK = $(NCAR_LIBS_MKL)  
 
 endif
 
@@ -251,6 +265,7 @@ SUMMA_SOLVER= \
 		vegLiqFlux.f90 \
 		snowLiqFlx.f90 \
 		soilLiqFlx.f90 \
+		bigAquifer.f90 \
 		computFlux.f90 \
 		computResid.f90 \
 		computJacob.f90 \
@@ -312,18 +327,18 @@ MODRUN = $(patsubst %, $(ENGINE_DIR)/%, $(SUMMA_MODRUN))
 SUMMA_MSOLVE = \
 
 # Define NetCDF routines
-SUMMA_NETCDF = \
+SUMMA_NCDF = \
 		netcdf_util.f90 \
 		def_output.f90 \
 		modelwrite.f90 \
 		read_icond.f90
-NETCDF = $(patsubst %, $(NETCDF_DIR)/%, $(SUMMA_NETCDF))
+NCDF = $(patsubst %, $(NETCDF_DIR)/%, $(SUMMA_NCDF))
 
 # ... stitch together common programs
 COMM_ALL = $(NRUTIL) $(NRPROC) $(HOOKUP) $(DATAMS) $(UTILMS)
 
 # ... stitch together SUMMA programs
-SUMMA_ALL = $(NETCDF) $(PRELIM) $(MODRUN) $(SOLVER)
+SUMMA_ALL = $(NCDF) $(PRELIM) $(MODRUN) $(SOLVER)
 
 # Define the driver routine
 SUMMA_DRIVER= \
@@ -368,7 +383,8 @@ endif
 #======================================================================
 
 # Compile
-all: compile_noah compile_comm compile_summa link clean install
+#all: compile_noah compile_comm compile_summa link clean install  # clean make recompile long
+all: compile_noah compile_comm compile_summa link install
 
 check:
 	$(info)

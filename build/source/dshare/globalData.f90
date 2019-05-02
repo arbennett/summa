@@ -37,6 +37,7 @@ MODULE globalData
  USE var_lookup,only:maxvarForc      ! forcing data:             maximum number variables
  USE var_lookup,only:maxvarAttr      ! attributes:               maximum number variables
  USE var_lookup,only:maxvarType      ! type index:               maximum number variables
+ USE var_lookup,only:maxvarId        ! IDs index:                maximum number variables
  USE var_lookup,only:maxvarProg      ! prognostic variables:     maximum number variables
  USE var_lookup,only:maxvarDiag      ! diagnostic variables:     maximum number variables
  USE var_lookup,only:maxvarFlux      ! model fluxes:             maximum number variables
@@ -85,6 +86,7 @@ MODULE globalData
  type(var_info),save,public                  :: forc_meta(maxvarForc)   ! model forcing data
  type(var_info),save,public                  :: attr_meta(maxvarAttr)   ! local attributes
  type(var_info),save,public                  :: type_meta(maxvarType)   ! local classification of veg, soil, etc.
+ type(var_info),save,public                  :: id_meta(maxvarId)       ! local labels of hru and gru IDs
  type(var_info),save,public                  :: mpar_meta(maxvarMpar)   ! local model parameters for each HRU
  type(var_info),save,public                  :: indx_meta(maxvarIndx)   ! local model indices for each HRU
  type(var_info),save,public                  :: prog_meta(maxvarProg)   ! local state variables for each HRU
@@ -100,12 +102,13 @@ MODULE globalData
  type(extended_info),save,public,allocatable :: averageFlux_meta(:)          ! timestep-average model fluxes
 
  ! define summary information on all data structures
- integer(i4b),parameter                      :: nStruct=12              ! number of data structures
+ integer(i4b),parameter                      :: nStruct=13              ! number of data structures
  type(struct_info),parameter,public,dimension(nStruct) :: structInfo=(/&
                    struct_info('time',  'TIME' , maxvarTime ), &        ! the time data structure
                    struct_info('forc',  'FORCE', maxvarForc ), &        ! the forcing data structure
                    struct_info('attr',  'ATTR' , maxvarAttr ), &        ! the attribute data structure
                    struct_info('type',  'TYPE' , maxvarType ), &        ! the type data structure
+                   struct_info('id',    'ID'   , maxvarId   ), &        ! the IDs data structure
                    struct_info('mpar',  'PARAM', maxvarMpar ), &        ! the model parameter data structure
                    struct_info('bpar',  'BPAR' , maxvarBpar ), &        ! the basin parameter data structure
                    struct_info('bvar',  'BVAR' , maxvarBvar ), &        ! the basin variable data structure
@@ -124,6 +127,7 @@ MODULE globalData
  integer(i4b),parameter,public               :: iname_veg =1001         ! named variable to denote a vegetation state variable
  integer(i4b),parameter,public               :: iname_soil=1002         ! named variable to denote a soil layer
  integer(i4b),parameter,public               :: iname_snow=1003         ! named variable to denote a snow layer
+ integer(i4b),parameter,public               :: iname_aquifer=1004      ! named variable to denote a snow layer
 
  ! define named variables to describe the state varible type
  integer(i4b),parameter,public               :: iname_nrgCanair=2001    ! named variable defining the energy of the canopy air space
@@ -135,6 +139,7 @@ MODULE globalData
  integer(i4b),parameter,public               :: iname_liqLayer=3003     ! named variable defining the liquid  water state variable for snow+soil layers
  integer(i4b),parameter,public               :: iname_matLayer=3004     ! named variable defining the matric head state variable for soil layers
  integer(i4b),parameter,public               :: iname_lmpLayer=3005     ! named variable defining the liquid matric potential state variable for soil layers
+ integer(i4b),parameter,public               :: iname_watAquifer=3006   ! named variable defining the water storage in the aquifer
 
  ! define named variables to describe the form and structure of the band-diagonal matrices used in the numerical solver
  ! NOTE: This indexing scheme provides the matrix structure expected by lapack. Specifically, lapack requires kl extra rows for additional storage.
@@ -150,8 +155,8 @@ MODULE globalData
  integer(i4b),parameter,public               :: ixBandMatrix=1002       ! named variable for the band diagonal matrix
 
  ! define indices describing the first and last layers of the Jacobian to print (for debugging)
- integer(i4b),parameter,public               :: iJac1=1                 ! first layer of the Jacobian to print
- integer(i4b),parameter,public               :: iJac2=9                 ! last layer of the Jacobian to print
+ integer(i4b),parameter,public               :: iJac1=16                 ! first layer of the Jacobian to print
+ integer(i4b),parameter,public               :: iJac2=20                 ! last layer of the Jacobian to print
 
  ! define indices describing the indices of the first and last HRUs in the forcing file
  integer(i4b),save,public                    :: ixHRUfile_min           ! minimum index
