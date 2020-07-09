@@ -23,6 +23,8 @@ module vegNrgFlux_module
 ! data types
 USE nrtype
 
+USE mod_network, only : network_type
+
 ! derived types to define the data structures
 USE data_types,only:&
                     var_i,            & ! data vector (i4b)
@@ -1276,7 +1278,6 @@ contains
     !write(*,'(a,f25.15)') 'scalarSenHeatTotal = ', scalarSenHeatTotal
     !write(*,'(a,f25.15)') 'scalarSenHeatCanopy = ', scalarSenHeatCanopy
     !write(*,'(a,f25.15)') 'scalarLatHeatCanopyEvap = ', scalarLatHeatCanopyEvap
-    !write(*,'(a,f25.15)') 'scalarLatHeatCanopyTrans = ', scalarLatHeatCanopyTrans
 
     !print*, 'scalarSenHeatGround = ', scalarSenHeatGround
     !print*, 'scalarLatHeatGround = ', scalarLatHeatGround
@@ -2759,6 +2760,12 @@ contains
  real(dp)                      :: dLatHeatCanopyEvap_dWetFrac  ! derivative in the latent heat of canopy evaporation w.r.t. canopy wet fraction (W m-2)
  real(dp)                      :: dLatHeatCanopyTrans_dWetFrac ! derivative in the latent heat of canopy transpiration w.r.t. canopy wet fraction (W m-2)
  real(dp)                      :: dLatHeatCanopyTrans_dCanLiq  ! derivative in the latent heat of canopy transpiration w.r.t. canopy liquid water (J kg-1 s-1)
+ real(dp)                      :: fracCanEvap  ! fraction of estimated LE from canopy evaporation
+ real(dp)                      :: fracCanTrans ! fraction of estimated LE from canopy transpiration
+ real(dp)                      :: fracGndEvap  !  fraction of estimated LE from ground evaporation
+ type(network_type)            :: net
+ real(4), dimension(8)         :: net_input
+ real(8), dimension(1)         :: net_output
  ! -----------------------------------------------------------------------------------------------------------------------------------------
  ! initialize error control
  err=0; message='turbFluxes/'
@@ -2867,10 +2874,10 @@ contains
   ! compute fluxes
   senHeatCanopy      = -volHeatCapacityAir*leafConductance*(canopyTemp - canairTemp)        ! (positive downwards)
   latHeatCanopyEvap  = -latHeatSubVapCanopy*latentHeatConstant*evapConductance*(satVP_CanopyTemp - VP_CanopyAir)    ! (positive downwards)
-  latHeatCanopyTrans =              -LH_vap*latentHeatConstant*transConductance*(satVP_CanopyTemp - VP_CanopyAir)   ! (positive downwards)
   !write(*,'(a,10(f25.15,1x))') 'latHeatCanopyEvap, VP_CanopyAir = ', latHeatCanopyEvap, VP_CanopyAir
   !write(*,'(a,10(f25.15,1x))') 'latHeatCanopyTrans, VP_CanopyAir = ', latHeatCanopyTrans, VP_CanopyAir
   !write(*,'(a,10(f25.15,1x))') 'transConductance = ', transConductance
+  latHeatCanopyTrans =              -LH_vap*latentHeatConstant*transConductance*(satVP_CanopyTemp - VP_CanopyAir)   ! (positive downwards)
 
   ! check that energy for canopy evaporation does not exhaust the available water
   ! NOTE: do this here, rather than enforcing solution constraints, because energy and mass solutions may be uncoupled
@@ -2904,6 +2911,39 @@ contains
  ! compute latent heat flux from the canopy air space to the atmosphere
  ! NOTE: VP_CanopyAir is a diagnostic variable
  latHeatTotal = latHeatCanopyEvap + latHeatCanopyTrans + latHeatGround
+
+ if (isnan(latHeatCanopyEvap) .or. isnan(latHeatCanopyTrans) .or. isnan(latHeatGround)) then
+   write(*,*) '1', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround
+   fracCanEvap =  0.34_dp
+   fracCanTrans = 0.33_dp
+   fracGndEvap =  0.33_dp
+ else
+   fracCanEvap =  latHeatCanopyEvap   / latHeatTotal
+   fracCanTrans = latHeatCanopyTrans / latHeatTotal
+   fracGndEvap =  latHeatGround       / latHeatTotal
+ endif
+
+  !----------------------------------------------------------------
+  ! NEURAL NETWORK GOES HERE
+  !----------------------------------------------------------------
+  call net%load('/pool0/data/andrbenn/ml_summa/models/DE-Obe_qle_config.txt')
+  net_input = (/ latHeatSubVapCanopy, latentHeatConstant, evapConductance, satVP_CanopyTemp - VP_CanopyAir, &
+                 transConductance, latHeatSubVapGround, groundConductanceLH, satVP_GroundTemp*soilRelHumidity - VP_CanopyAir/)
+  net_output = net%output(net_input)
+  latHeatTotal = real(net_output(1) ** 2)  -1345.8562623576624
+  latHeatCanopyEvap = latHeatTotal * fracCanEvap
+  latHeatCanopyTrans = latHeatTotal * fracCanTrans
+  latHeatGround = latHeatTotal * fracGndEvap
+  if (isnan(latHeatCanopyEvap) .or. isnan(latHeatCanopyTrans) .or. isnan(latHeatGround)) then
+    write(*,*) '2', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround
+  endif
+  if ((latHeatCanopyEvap .eq. latHeatCanopyEvap-1.0_dp) .or. (latHeatCanopyTrans .eq. latHeatCanopyTrans-1.0_dp) .or. (latHeatGround .eq.latHeatGround-1.0_dp)) then
+    write(*,*) '3', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround
+  endif
+  !----------------------------------------------------------------
+  ! NEURAL NETWORK GOES HERE
+  !----------------------------------------------------------------
+
 
  ! * compute derivatives
  if(ixDerivMethod == analytical)then
