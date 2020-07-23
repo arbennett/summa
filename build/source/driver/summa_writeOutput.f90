@@ -1,5 +1,5 @@
 ! SUMMA - Structure for Unifying Multiple Modeling Alternatives
-! Copyright (C) 2014-2015 NCAR/RAL
+! Copyright (C) 2014-2020 NCAR/RAL; University of Saskatchewan; University of Washington
 !
 ! This file is part of SUMMA
 !
@@ -105,7 +105,6 @@ contains
  ! file information
  USE summaFileManager,only:OUTPUT_PATH,OUTPUT_PREFIX         ! define output file
  USE globalData,only:output_fileSuffix                       ! suffix for the output file
- USE globalData,only:fileout                                 ! name of the output file
  USE globalData,only:nHRUrun                                 ! number of HRU in the run
  USE globalData,only:nGRUrun                                 ! number of GRU in the run
  ! ---------------------------------------------------------------------------------------
