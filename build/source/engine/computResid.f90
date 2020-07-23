@@ -223,8 +223,12 @@ contains
  ! compute the residual vector for the vegetation canopy
  ! NOTE: sMul(ixVegHyd) = 1, but include as it converts all variables to quadruple precision
  ! --> energy balance
- if(ixCasNrg/=integerMissing) rVec(ixCasNrg) = sMul(ixCasNrg)*scalarCanairTempTrial - ( (sMul(ixCasNrg)*scalarCanairTemp + fVec(ixCasNrg)*dt) + rAdd(ixCasNrg) )
- if(ixVegNrg/=integerMissing) rVec(ixVegNrg) = sMul(ixVegNrg)*scalarCanopyTempTrial - ( (sMul(ixVegNrg)*scalarCanopyTemp + fVec(ixVegNrg)*dt) + rAdd(ixVegNrg) )
+ if(ixCasNrg/=integerMissing) then
+   rVec(ixCasNrg) = sMul(ixCasNrg)*scalarCanairTempTrial - ( (sMul(ixCasNrg)*scalarCanairTemp + fVec(ixCasNrg)*dt) + rAdd(ixCasNrg) )
+ endif
+ if(ixVegNrg/=integerMissing) then
+   rVec(ixVegNrg) = sMul(ixVegNrg)*scalarCanopyTempTrial - ( (sMul(ixVegNrg)*scalarCanopyTemp + fVec(ixVegNrg)*dt) + rAdd(ixVegNrg) )
+ endif
  ! --> mass balance
  if(ixVegHyd/=integerMissing)then
   scalarCanopyHyd = merge(scalarCanopyWat, scalarCanopyLiq, (ixStateType( ixHydCanopy(ixVegVolume) )==iname_watCanopy) )
@@ -252,15 +256,12 @@ contains
  ! compute the residual vector for the aquifer
  if(ixAqWat/=integerMissing) rVec(ixAqWat) = sMul(ixAqWat)*scalarAquiferStorageTrial - ( (sMul(ixAqWat)*scalarAquiferStorage + fVec(ixAqWat)*dt) + rAdd(ixAqWat) )
 
- ! print result
- if(globalPrintFlag)then
-  write(*,'(a,1x,100(e12.5,1x))') 'rVec = ', rVec(min(iJac1,size(rVec)):min(iJac2,size(rVec)))
-  write(*,'(a,1x,100(e12.5,1x))') 'fVec = ', fVec(min(iJac1,size(rVec)):min(iJac2,size(rVec)))
-  !print*, 'PAUSE:'; read(*,*)
- endif
-
  ! check
  if(any(isNan(rVec)))then
+  write(*,*) isNan(rVec)
+  write(*,*) 'ixVegNrg', ixVegNrg, scalarCanopyTempTrial, scalarCanopyTemp, dt, sMul(ixVegNrg), fVec(ixVegNrg)
+  write(*,*) sMul(ixVegNrg)*scalarCanopyTempTrial, sMul(ixVegNrg)*scalarCanopyTemp,  fVec(ixVegNrg)*dt, rAdd(ixVegNrg)
+  write(*,'(a,1x,100(e12.5,1x))') 'rVec = ', rVec
   message=trim(message)//'we found some Indian bread (NaN)'
   err=20; return
  endif

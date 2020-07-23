@@ -385,28 +385,6 @@ contains
                  err,cmessage)                                ! intent(out):   error control
  if(err/=0)then; message=trim(message)//trim(cmessage); return; end if  ! (check for errors)
 
- ! print the states in the canopy domain
- !print*, 'dt = ', dt
- !write(*,'(a,1x,10(f20.10,1x))') 'scalarCanopyTempTrial    = ', scalarCanopyTempTrial
- !write(*,'(a,1x,10(f20.10,1x))') 'scalarCanopyWatTrial     = ', scalarCanopyWatTrial
- !write(*,'(a,1x,10(f20.10,1x))') 'scalarCanopyLiqTrial     = ', scalarCanopyLiqTrial
- !write(*,'(a,1x,10(f20.10,1x))') 'scalarCanopyIceTrial     = ', scalarCanopyIceTrial
-
- ! print the states in the snow+soil domain
- !write(*,'(a,1x,10(f20.10,1x))') 'mLayerTempTrial          = ', mLayerTempTrial(iJac1:min(nLayers,iJac2))
- !write(*,'(a,1x,10(f20.10,1x))') 'mLayerVolFracWatTrial    = ', mLayerVolFracWatTrial(iJac1:min(nLayers,iJac2))
- !write(*,'(a,1x,10(f20.10,1x))') 'mLayerVolFracLiqTrial    = ', mLayerVolFracLiqTrial(iJac1:min(nLayers,iJac2))
- !write(*,'(a,1x,10(f20.10,1x))') 'mLayerVolFracIceTrial    = ', mLayerVolFracIceTrial(iJac1:min(nLayers,iJac2))
- !write(*,'(a,1x,10(f20.10,1x))') 'mLayerMatricHeadTrial    = ', mLayerMatricHeadTrial(iJac1:min(nSoil,iJac2))
- !write(*,'(a,1x,10(f20.10,1x))') 'mLayerMatricHeadLiqTrial = ', mLayerMatricHeadLiqTrial(iJac1:min(nSoil,iJac2))
-
- ! print the water content
- if(globalPrintFlag)then
-  if(iJac1<nSnow) write(*,'(a,10(f16.10,1x))') 'mLayerVolFracWatTrial = ', mLayerVolFracWatTrial(iJac1:min(iJac2,nSnow))
-  if(iJac1<nSnow) write(*,'(a,10(f16.10,1x))') 'mLayerVolFracLiqTrial = ', mLayerVolFracLiqTrial(iJac1:min(iJac2,nSnow))
-  if(iJac1<nSnow) write(*,'(a,10(f16.10,1x))') 'mLayerVolFracIceTrial = ', mLayerVolFracIceTrial(iJac1:min(iJac2,nSnow))
- endif
-
  ! save the number of flux calls per time step
  indx_data%var(iLookINDEX%numberFluxCalc)%dat(1) = indx_data%var(iLookINDEX%numberFluxCalc)%dat(1) + 1
 

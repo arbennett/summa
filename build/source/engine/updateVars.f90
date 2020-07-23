@@ -570,6 +570,9 @@ contains
     else
      tempMin = max(tempMin,xTemp)
     end if
+    if (isnan(residual) .or. isnan(derivative)) then
+        write(*,*) 'res or der is nan ', residual, derivative
+    endif
 
     ! compute iteration increment
     tempInc    = residual/derivative  ! K
@@ -600,6 +603,12 @@ contains
     endif  ! if the domain is soil
 
     ! update the temperature trial
+    if (isnan(tempInc)) then
+        write(*,*) 'tempinc is nan ', tempinc, xtemp, residual
+    endif
+    if (abs(xtemp - scalarCanopyTempTrial) > 20) then
+        write(*,*) 'xtemp going out of range, ', scalarCanopyTempTrial, xtemp, tempinc, residual
+    endif
     xTemp = xTemp + tempInc
 
     ! check failed convergence
@@ -613,6 +622,9 @@ contains
   end do iterations ! iterating
 
   ! save temperature
+  if (isnan(xTemp)) then
+    write(*,*) 'xtemp is nan', scalarCanopyTempTrial
+  endif
   select case(ixDomainType)
    case(iname_veg);              scalarCanopyTempTrial   = xTemp
    case(iname_snow, iname_soil); mLayerTempTrial(iLayer) = xTemp
