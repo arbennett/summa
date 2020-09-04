@@ -122,6 +122,7 @@ contains
  ! diagnostic variables and parameters (input)
  heightCanopyTop                 => mpar_data%var(iLookPARAM%heightCanopyTop)%dat(1),          & ! intent(in):    [dp] height of the top of the canopy layer (m)
  heightCanopyBottom              => mpar_data%var(iLookPARAM%heightCanopyBottom)%dat(1),       & ! intent(in):    [dp] height of the bottom of the canopy layer (m)
+ laiScaleParam                   => mpar_data%var(iLookPARAM%laiScaleParam)%dat(1),            & ! intent(in):    [dp] scaling parameter for LAI/SAI
  scalarRootZoneTemp              => diag_data%var(iLookDIAG%scalarRootZoneTemp)%dat(1),        & ! intent(in):    [dp] root zone temperature (K)
 
  ! diagnostic variables and parameters (input/output)
@@ -176,6 +177,10 @@ contains
                  scalarGrowingSeasonIndex     ) ! intent(out): growing season index (0=off, 1=on)
 
   ! determine additional phenological variables
+  scalarLAI = scalarLAI * laiScaleParam
+  scalarSAI = scalarSAI * laiScaleParam
+  scalarExposedLAI = scalarExposedLAI * laiScaleParam
+  scalarExposedSAI = scalarExposedSAI * laiScaleParam
   exposedVAI      = scalarExposedLAI + scalarExposedSAI   ! exposed vegetation area index (m2 m-2)
   canopyDepth     = heightCanopyTop - heightCanopyBottom  ! canopy depth (m)
   heightAboveSnow = heightCanopyTop - scalarSnowDepth     ! height top of canopy is above the snow surface (m)
