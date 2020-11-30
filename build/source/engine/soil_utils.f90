@@ -316,7 +316,8 @@ contains
  real(dp)            :: matricHead  ! matric head (m)
  ! local variables
  real(dp)            :: effSat      ! effective saturation (-)
- real(dp),parameter  :: verySmall=epsilon(1._dp)  ! a very small number (avoid effective saturation of zero)
+ real(dp) :: verySmall
+ verySmall=theta_res / 10._dp!epsilon(1._dp)  ! a very small number (avoid effective saturation of zero)
  ! compute effective saturation
  effSat = max(verySmall, (theta - theta_res) / (theta_sat - theta_res))
  ! compute matric head

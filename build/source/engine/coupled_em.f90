@@ -354,7 +354,7 @@ contains
 
  ! short-cut to the algorithmic control parameters
  ! NOTE - temporary assignment of minstep to foce something reasonable
- minstep = 10._dp  ! mpar_data%var(iLookPARAM%minstep)%dat(1)  ! minimum time step (s)
+ minstep = mpar_data%var(iLookPARAM%minstep)%dat(1)  ! minimum time step (s)
  maxstep = mpar_data%var(iLookPARAM%maxstep)%dat(1)  ! maximum time step (s)
  !print*, 'minstep, maxstep = ', minstep, maxstep
 
@@ -515,7 +515,8 @@ contains
  if(err/=0)then; err=20; message=trim(message)//trim(cmessage); return; end if
 
  ! adjust canopy temperature to account for new snow
- if(computeVegFlux)then ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+ !if(computeVegFlux)then ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+ if(.false.)then ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
   call tempAdjust(&
                   ! input: derived parameters
                   canopyDepth,                 & ! intent(in): canopy depth (m)
@@ -767,7 +768,9 @@ contains
    ! check that the step is not tiny
    if(dt_sub < minstep)then
     print*,ixSolution
-    print*, 'dtSave, dt_sub', dtSave, dt_sub
+    print*, prog_data%var(iLookPROG%scalarCanopyTemp)%dat
+    print*, prog_data%var(iLookPROG%mLayerTemp)%dat
+    print*, 'dtSave, dt_sub', dtSave, dt_sub, tooMuchMelt
     message=trim(message)//'length of the coupled step is below the minimum step length'
     err=20; return
    endif
@@ -1040,6 +1043,7 @@ contains
  mLayerVolFracIce           => prog_data%var(iLookPROG%mLayerVolFracIce)%dat(nSnow+1:nLayers)                ,&  ! volumetric ice content in each soil layer (-)
  mLayerVolFracLiq           => prog_data%var(iLookPROG%mLayerVolFracLiq)%dat(nSnow+1:nLayers)                ,&  ! volumetric liquid water content in each soil layer (-)
  scalarAquiferStorage       => prog_data%var(iLookPROG%scalarAquiferStorage)%dat(1)                          ,&  ! aquifer storage (m)
+ mLayerTranspire           => flux_data%var(iLookFLUX%mLayerTranspire)%dat               ,& ! intent(in)    : [dp(:)]  transpiration loss from each soil layer (m s-1)
  ! error tolerance
  absConvTol_liquid          => mpar_data%var(iLookPARAM%absConvTol_liquid)%dat(1)                            ,&  ! absolute convergence tolerance for vol frac liq water (-)
  scalarTotalSoilIce         => diag_data%var(iLookDIAG%scalarTotalSoilIce)%dat(1)                            ,&  ! total ice in the soil column (kg m-2)
@@ -1168,6 +1172,8 @@ contains
  ! check the soil water balance
  scalarSoilWatBalError  = balanceSoilWater1 - (balanceSoilWater0 + (balanceSoilInflux + balanceSoilET - balanceSoilBaseflow - balanceSoilDrainage - totalSoilCompress) )
  if(abs(scalarSoilWatBalError) > absConvTol_liquid*iden_water*10._dp)then  ! NOTE: kg m-2, so need coarse tolerance to account for precision issues
+  write(*,*) mLayerTranspire
+  write(*,*) indx_data%var(iLookINDEX%ixSoilOnlyHyd)%dat
   write(*,*)               'solution method           = ', ixSolution
   write(*,'(a,1x,f20.10)') 'data_step                 = ', data_step
   write(*,'(a,1x,f20.10)') 'totalSoilCompress         = ', totalSoilCompress
@@ -1180,8 +1186,7 @@ contains
   write(*,'(a,1x,f20.10)') 'balanceSoilDrainage       = ', balanceSoilDrainage
   write(*,'(a,1x,f20.10)') 'balanceSoilET             = ', balanceSoilET
   write(*,'(a,1x,f20.10)') 'scalarSoilWatBalError     = ', scalarSoilWatBalError
-  write(*,'(a,1x,f20.10)') 'scalarSoilWatBalError     = ', scalarSoilWatBalError/iden_water
-  write(*,'(a,1x,f20.10)') 'absConvTol_liquid         = ', absConvTol_liquid
+  write(*,'(a,1x,f20.10)') 'absConvTol_liquid         = ', absConvTol_liquid*iden_water*10_dp
   ! error control
   message=trim(message)//'soil hydrology does not balance'
   err=20; return

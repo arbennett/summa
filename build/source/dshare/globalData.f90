@@ -26,6 +26,7 @@ MODULE globalData
  ! data types
  USE nrtype
  USE netcdf
+ USE mod_network, only : network_type
  USE,intrinsic :: ieee_arithmetic    ! IEEE arithmetic
  USE data_types,only:gru2hru_map     ! mapping between the GRUs and HRUs
  USE data_types,only:hru2gru_map     ! mapping between the GRUs and HRUs
@@ -60,6 +61,7 @@ MODULE globalData
  ! * part 1: parameters that are fixed across multiple instantiations
  ! ----------------------------------------------------------------------------------------------------------------
 
+ type(network_type),public                   :: neuralNet ! neural network to parameterize turbulent heat fluxes
  ! define missing values
  real(qp),parameter,public                   :: quadMissing    = nr_quadMissing    ! (from nrtype) missing quadruple precision number
  real(dp),parameter,public                   :: realMissing    = nr_realMissing    ! (from nrtype) missing double precision number
@@ -302,7 +304,7 @@ MODULE globalData
  integer(i4b),save,public                    :: yearLength                  ! number of days in the current year
  integer(i4b),save,public                    :: urbanVegCategory            ! vegetation category for urban areas
  logical(lgt),save,public                    :: doJacobian=.false.          ! flag to compute the Jacobian
- logical(lgt),save,public                    :: globalPrintFlag=.false.     ! flag to compute the Jacobian
+ logical(lgt),save,public                    :: globalPrintFlag=.true.     ! flag to compute the Jacobian
  integer(i4b),save,public                    :: chunksize=1024              ! chunk size for the netcdf read/write
  integer(i4b),save,public                    :: outputPrecision=nf90_double ! variable type
 
@@ -331,7 +333,7 @@ MODULE globalData
  ! output file information
  logical(lgt),dimension(maxvarFreq),save,public :: outFreq              ! true if the output frequency is desired
  integer(i4b),dimension(maxvarFreq),save,public :: ncid                 ! netcdf output file id
- 
+
  ! look-up values for the choice of the time zone information (formerly in modelDecisions module)
  integer(i4b),parameter,public               :: ncTime=1                ! time zone information from NetCDF file (timeOffset = longitude/15. - ncTimeOffset)
  integer(i4b),parameter,public               :: utcTime=2               ! all times in UTC (timeOffset = longitude/15. hours)

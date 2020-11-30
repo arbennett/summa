@@ -259,8 +259,8 @@ contains
  ! check
  if(any(isNan(rVec)))then
   write(*,*) isNan(rVec)
-  write(*,*) 'ixVegNrg', ixVegNrg, scalarCanopyTempTrial, scalarCanopyTemp, dt, sMul(ixVegNrg), fVec(ixVegNrg)
-  write(*,*) sMul(ixVegNrg)*scalarCanopyTempTrial, sMul(ixVegNrg)*scalarCanopyTemp,  fVec(ixVegNrg)*dt, rAdd(ixVegNrg)
+  !write(*,*) 'ixVegNrg', ixVegNrg, scalarCanopyTempTrial, scalarCanopyTemp, dt, sMul(ixVegNrg), fVec(ixVegNrg)
+  !write(*,*) sMul(ixVegNrg)*scalarCanopyTempTrial, sMul(ixVegNrg)*scalarCanopyTemp,  fVec(ixVegNrg)*dt, rAdd(ixVegNrg)
   write(*,'(a,1x,100(e12.5,1x))') 'rVec = ', rVec
   message=trim(message)//'we found some Indian bread (NaN)'
   err=20; return

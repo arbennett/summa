@@ -176,8 +176,8 @@ contains
  integer(i4b)                    :: iter                            ! iteration index
  integer(i4b)                    :: niter                           ! number of iterations
  integer(i4b),parameter          :: maxiter=100                     ! maximum number of iterations
- real(dp),parameter              :: nrgConvTol=1.e-4_dp             ! convergence tolerance for energy (J m-3)
- real(dp),parameter              :: tempConvTol=1.e-6_dp            ! convergence tolerance for temperature (K)
+ real(dp),parameter              :: nrgConvTol=1.e-2_dp             ! convergence tolerance for energy (J m-3)
+ real(dp),parameter              :: tempConvTol=1.e-2_dp            ! convergence tolerance for temperature (K)
  real(dp)                        :: critDiff                        ! temperature difference from critical (K)
  real(dp)                        :: tempMin                         ! minimum bracket for temperature (K)
  real(dp)                        :: tempMax                         ! maximum bracket for temperature (K)
@@ -542,7 +542,7 @@ contains
       call xTempSolve(&
                       ! constant over iterations
                       meltNrg         = meltNrg                                 ,&  ! intent(in)    : energy for melt+freeze (J m-3)
-                      heatCap         = mLayerVolHtCapBulk(iLayer)              ,&  ! intent(in)    : volumetric heat capacity (J m-3 K-1)
+                      heatCap         = mLayerVolHtCapBulk(iLayer) + scalarBulkVolHeatCapVeg              ,&  ! intent(in)    : volumetric heat capacity (J m-3 K-1)
                       tempInit        = mLayerTemp(iLayer)                      ,&  ! intent(in)    : initial temperature (K)
                       volFracIceInit  = mLayerVolFracIce(iLayer)                ,&  ! intent(in)    : initial volumetric fraction of ice (-)
                       ! trial values
@@ -557,12 +557,12 @@ contains
      case default; err=20; message=trim(message)//'expect case to be iname_veg, iname_snow, iname_soil'; return
 
     end select  ! domain type
-
     ! check validity of residual
     if( ieee_is_nan(residual) )then
      message=trim(message)//'residual is not valid'
      err=20; return
     endif
+    !print*, scalarBulkVolHeatCapVeg, mLayerVolHtCapBulk(:)
 
     ! update bracket
     if(residual < 0._dp)then
@@ -606,8 +606,9 @@ contains
     if (isnan(tempInc)) then
         write(*,*) 'tempinc is nan ', tempinc, xtemp, residual
     endif
-    if (abs(xtemp - scalarCanopyTempTrial) > 20) then
-        write(*,*) 'xtemp going out of range, ', scalarCanopyTempTrial, xtemp, tempinc, residual
+    if (abs(xtemp - scalarCanopyTempTrial) > 3) then
+        write(*,*) 'xtemp going out of range, ', scalarCanopyTempTrial, xtemp, tempinc, residual, ixDomainType
+        write(*,*) 'mlayertemptrial ', mLayerTempTrial(:)
     endif
     xTemp = xTemp + tempInc
 
@@ -623,7 +624,8 @@ contains
 
   ! save temperature
   if (isnan(xTemp)) then
-    write(*,*) 'xtemp is nan', scalarCanopyTempTrial
+    write(*,*) 'xtemp is nan', scalarCanopyTempTrial, xtemp, tempinc, residual, ixDomainType, iter, maxiter
+    write(*,*) 'mlayertemptrial ', mLayerTempTrial(:)
   endif
   select case(ixDomainType)
    case(iname_veg);              scalarCanopyTempTrial   = xTemp

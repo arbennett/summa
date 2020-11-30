@@ -33,6 +33,7 @@ USE var_lookup,only:iLookID                              ! look-up values for lo
 USE var_lookup,only:iLookBVAR                               ! look-up values for basin-average model variables
 USE var_lookup,only:iLookDECISIONS                          ! look-up values for model decisions
 USE globalData,only:urbanVegCategory                        ! vegetation category for urban areas
+USE globalData,only:neuralNet
 
 ! metadata structures
 USE globalData,only:mpar_meta,bpar_meta                     ! parameter metadata structures
@@ -90,6 +91,7 @@ contains
  USE globalData,only:elapsedSetup                            ! elapsed time for the parameter setup
  ! file paths
  USE summaFileManager,only:SETNGS_PATH                       ! define path to settings files (e.g., Noah vegetation tables)
+ USE summaFileManager,only:NETWORK_FILE
  USE summaFileManager,only:LOCAL_ATTRIBUTES                  ! name of model initial attributes file
  USE summaFileManager,only:LOCALPARAM_INFO,BASINPARAM_INFO   ! files defining the default values and constraints for model parameters
  USE summaFileManager,only:GENPARM,VEGPARM,SOILPARM,MPTABLE  ! files defining the noah tables
@@ -169,6 +171,9 @@ contains
 
  ! define the attributes file
  attrFile = trim(SETNGS_PATH)//trim(LOCAL_ATTRIBUTES)
+
+ ! define the neural network
+ call neuralNet%load(trim(SETNGS_PATH)//trim(NETWORK_FILE))
 
  ! read local attributes for each HRU
  call read_attrb(trim(attrFile),nGRU,attrStruct,typeStruct,idStruct,err,cmessage)

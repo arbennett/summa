@@ -184,6 +184,7 @@ contains
                             Cp_ice*scalarCanopyIce/canopyDepth                ! ice component
  else
   scalarBulkVolHeatCapVeg = valueMissing
+  scalarBulkVolHeatCapVeg = 874.0_dp * 25.0_dp * 10.0_dp
  end if
  !print*, 'diagn_evar: scalarBulkVolHeatCapVeg = ', scalarBulkVolHeatCapVeg
 
@@ -219,12 +220,14 @@ contains
     mLayerVolHtCapBulk(iLayer) = iden_soil(iSoil)  * Cp_soil  * ( 1._dp - theta_sat(iSoil) ) + & ! soil component
                                  iden_ice          * Cp_Ice   * mLayerVolFracIce(iLayer)     + & ! ice component
                                  iden_water        * Cp_water * mLayerVolFracLiq(iLayer)     + & ! liquid water component
-                                 iden_air          * Cp_air   * mLayerVolFracAir(iLayer)         ! air component
+                                 iden_air          * Cp_air   * mLayerVolFracAir(iLayer)     + &    ! air component
+                                 scalarBulkVolHeatCapVeg
    ! * snow
    case(iname_snow)
     mLayerVolHtCapBulk(iLayer) = iden_ice          * Cp_ice   * mLayerVolFracIce(iLayer)     + & ! ice component
                                  iden_water        * Cp_water * mLayerVolFracLiq(iLayer)     + & ! liquid water component
-                                 iden_air          * Cp_air   * mLayerVolFracAir(iLayer)         ! air component
+                                 iden_air          * Cp_air   * mLayerVolFracAir(iLayer)      + &   ! air component
+                                 scalarBulkVolHeatCapVeg
    case default; err=20; message=trim(message)//'unable to identify type of layer (snow or soil) to compute olumetric heat capacity'; return
   end select
 

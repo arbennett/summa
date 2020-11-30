@@ -291,7 +291,8 @@ contains
   ! input: factors limiting transpiration (from vegFlux routine)
   mLayerRootDensity      => diag_data%var(iLookDIAG%mLayerRootDensity)%dat,         & ! intent(in): root density in each layer (-)
   scalarTranspireLim     => diag_data%var(iLookDIAG%scalarTranspireLim)%dat(1),     & ! intent(in): weighted average of the transpiration limiting factor (-)
-  mLayerTranspireLim     => diag_data%var(iLookDIAG%mLayerTranspireLim)%dat         & ! intent(in): transpiration limiting factor in each layer (-)
+  mLayerTranspireLim     => diag_data%var(iLookDIAG%mLayerTranspireLim)%dat ,        & ! intent(in): transpiration limiting factor in each layer (-)
+ scalarLAI                       => diag_data%var(iLookDIAG%scalarLAI)%dat(1)                      & ! intent(in): [dp] one-sided leaf area index (m2 m-2)
  )  ! associating local variables with the information in the data structures
 
  ! -------------------------------------------------------------------------------------------------------------------------------------------------
@@ -370,10 +371,18 @@ contains
   endif
 
   ! compute transpiration loss from each soil layer (kg m-2 s-1 --> m s-1)
-  mLayerTranspire = mLayerTranspireFrac(:)*scalarCanopyTranspiration/iden_water
+  mLayerTranspire = mLayerTranspireFrac(:)*scalarGroundEvaporation / iden_water
 
   ! special case of prescribed head -- no transpiration
   if(ixBcUpperSoilHydrology==prescribedHead) mLayerTranspire(:) = 0._dp
+ else
+
+  if(scalarTranspireLim > tiny(scalarTranspireLim))then ! (transpiration may be non-zero even if the soil moisture limiting factor is zero)
+   mLayerTranspireFrac(ixTop) = mLayerRootDensity(ixTop)*mLayerTranspireLim(ixTop)/scalarTranspireLim
+  else ! (possible for there to be non-zero conductance and therefore transpiration in this case)
+   mLayerTranspireFrac(ixTop) = mLayerRootDensity(ixTop) / sum(mLayerRootDensity)
+  end if
+  mLayerTranspire(ixTop) = mLayerTranspireFrac(ixTop)*scalarGroundEvaporation / iden_water
 
  endif  ! if need to compute transpiration
 
@@ -531,7 +540,9 @@ contains
   if(err/=0)then; message=trim(message)//trim(cmessage); return; end if
 
   ! include base soil evaporation as the upper boundary flux
-  iLayerLiqFluxSoil(0) = scalarGroundEvaporation/iden_water + scalarSurfaceInfiltration
+  !iLayerLiqFluxSoil(0) = scalarGroundEvaporation  /( iden_water) + scalarSurfaceInfiltration
+  !iLayerLiqFluxSoil(0) = scalarGroundEvaporation * (1.0_dp - scalarLAI / 12.0_dp)  /( iden_water) + scalarSurfaceInfiltration
+  iLayerLiqFluxSoil(0) =  scalarSurfaceInfiltration
 
   ! get copies of surface flux to compute numerical derivatives
   if(deriv_desired .and. ixDerivMethod==numerical)then
@@ -700,7 +711,8 @@ contains
  ! -------------------------------------------------------------------------------------------------------------------------------------------------
 
  ! define the need to compute drainage
- if( .not. (scalarSolution .and. ixTop<nSoil) )then
+ !if( .not. (scalarSolution .and. ixTop<nSoil) )then
+ if( .not. ixTop<nSoil )then
 
   ! either one or multiple flux calls, depending on if using analytical or numerical derivatives
   do itry=nFlux,0,-1  ! (work backwards to ensure all computed fluxes come from the un-perturbed case)
@@ -1013,7 +1025,7 @@ contains
    ! compute the hydraulic conductivity of macropores (m s-1)
    localVolFracLiq = volFracLiq(scalarMatricHeadTrial,vGn_alpha,theta_res,theta_sat,vGn_n,vGn_m)
    scalarHydCondMP = hydCondMP_liq(localVolFracLiq,theta_sat,theta_mp,mpExp,scalarSatHydCondMP,scalarSatHydCond)
-   scalarHydCond   = hydCond_noIce*iceImpedeFac + scalarHydCondMP
+   scalarHydCond   = max(hydCond_noIce*iceImpedeFac + scalarHydCondMP, 0.0_dp)
 
    ! compute derivative in hydraulic conductivity (m s-1)
    if(deriv_desired)then
@@ -1333,8 +1345,8 @@ contains
     if(rootZoneIce > tiny(rootZoneIce))then  ! (avoid divide by zero)
      alpha            = 1._dp/(soilIceCV**2._dp)        ! shape parameter in the Gamma distribution
      xLimg            = alpha*soilIceScale/rootZoneIce  ! upper limit of the integral
-     !scalarFrozenArea = 1._dp - gammp(alpha,xLimg)      ! fraction of frozen area
-     scalarFrozenArea = 0._dp
+     scalarFrozenArea = 1._dp - gammp(alpha,xLimg)      ! fraction of frozen area
+     !scalarFrozenArea = 0._dp
     else
      scalarFrozenArea = 0._dp
     end if

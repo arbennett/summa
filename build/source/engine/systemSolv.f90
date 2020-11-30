@@ -217,7 +217,7 @@ contains
  real(qp)                        :: rVec(nState)    ! NOTE: qp    ! residual vector
  real(dp)                        :: rAdd(nState)                  ! additional terms in the residual vector
  real(dp)                        :: fOld,fNew                     ! function values (-); NOTE: dimensionless because scaled
- real(dp)                        :: xMin,xMax                     ! state minimum and maximum (mixed units) 
+ real(dp)                        :: xMin,xMax                     ! state minimum and maximum (mixed units)
  logical(lgt)                    :: converged                     ! convergence flag
  logical(lgt)                    :: feasible                      ! feasibility flag
  real(dp)                        :: resSinkNew(nState)            ! additional terms in the residual vector
