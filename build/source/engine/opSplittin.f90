@@ -811,27 +811,27 @@ contains
        if(failedMinimumStep .and. ixSolution==scalar) reduceCoupledStep=.true.
 
        ! check
-       !if(ixCoupling/=fullyCoupled)then
-       ! print*, 'dt = ', dt
-       ! print*, 'after varSubstep: err              = ', err
-       ! print*, 'after varSubstep: cmessage         = ', trim(cmessage)
-       ! print*, 'after varSubstep: computeVegFlux   = ', computeVegFlux
-       ! print*, 'after varSubstep: stateMask        = ', stateMask
-       ! print*, 'after varSubstep: coupling         = ', (ixCoupling==fullyCoupled)
-       ! print*, 'after varSubstep: scalar solve     = ', (ixSolution==scalar)
-       ! print*, 'iStateTypeSplit, nStateTypeSplit = ', iStateTypeSplit, nStateTypeSplit
-       ! print*, 'iDomainSplit,    nDomainSplit    = ', iDomainSplit,    nDomainSplit
-       ! print*, 'nSubset           = ', nSubset
-       ! print*, 'tooMuchMelt       = ', tooMuchMelt
-       ! print*, 'reduceCoupledStep = ', reduceCoupledStep
-       ! print*, 'failedMinimumStep = ', failedMinimumStep, merge('coupled','opSplit',ixCoupling==fullyCoupled)
-       ! if(ixSolution==scalar)then; print*, 'PAUSE'; read(*,*); endif
-       !endif
+       if(ixCoupling/=fullyCoupled)then
+        !print*, 'dt = ', dt
+        !print*, 'after varSubstep: err              = ', err
+        !print*, 'after varSubstep: cmessage         = ', trim(cmessage)
+        !print*, 'after varSubstep: computeVegFlux   = ', computeVegFlux
+        !print*, 'after varSubstep: stateMask        = ', stateMask
+        !print*, 'after varSubstep: coupling         = ', (ixCoupling==fullyCoupled)
+        !print*, 'after varSubstep: scalar solve     = ', (ixSolution==scalar)
+        !print*, 'iStateTypeSplit, nStateTypeSplit = ', iStateTypeSplit, nStateTypeSplit
+        !print*, 'iDomainSplit,    nDomainSplit    = ', iDomainSplit,    nDomainSplit
+        !print*, 'nSubset           = ', nSubset
+        !print*, 'tooMuchMelt       = ', tooMuchMelt
+        !print*, 'reduceCoupledStep = ', reduceCoupledStep
+        !print*, 'failedMinimumStep = ', failedMinimumStep, merge('coupled','opSplit',ixCoupling==fullyCoupled)
+        !if(ixSolution==scalar)then; print*, 'PAUSE'; read(*,*); endif
+       endif
 
-       !if(ixSolution==scalar)then
-       ! !print*, trim(message)//'stop: checking scalar solution'; stop
-       ! print*, trim(message)//'pause: checking scalar solution'; read(*,*)
-       !endif
+       if(ixSolution==scalar)then
+        !print*, trim(message)//'stop: checking scalar solution'; stop
+        !print*, trim(message)//'pause: checking scalar solution'; read(*,*)
+       endif
 
        !print*, 'tooMuchMelt, reduceCoupledStep = ', tooMuchMelt, reduceCoupledStep
 

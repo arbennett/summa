@@ -283,6 +283,7 @@ contains
  mpar_meta(iLookPARAM%zmaxLayer2_upper)      = var_info('zmaxLayer2_upper'      , 'maximum layer depth for the 2nd layer when > 2 layers'            , 'm'               , get_ixVarType('scalarv'), iMissVec, iMissVec, .false.)
  mpar_meta(iLookPARAM%zmaxLayer3_upper)      = var_info('zmaxLayer3_upper'      , 'maximum layer depth for the 3rd layer when > 3 layers'            , 'm'               , get_ixVarType('scalarv'), iMissVec, iMissVec, .false.)
  mpar_meta(iLookPARAM%zmaxLayer4_upper)      = var_info('zmaxLayer4_upper'      , 'maximum layer depth for the 4th layer when > 4 layers'            , 'm'               , get_ixVarType('scalarv'), iMissVec, iMissVec, .false.)
+ mpar_meta(iLookPARAM%laiScaleParam)      = var_info('laiScaleParam'      , 'scale param for lai/sai'            , '-'               , get_ixVarType('scalarv'), iMissVec, iMissVec, .false.)
 
  ! -----
  ! * basin parameter data...

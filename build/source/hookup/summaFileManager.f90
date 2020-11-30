@@ -51,6 +51,7 @@ CHARACTER(LEN=summaPathLen)  :: FORCING_FILELIST = 'summa_zForcingFileList.txt' 
 CHARACTER(LEN=summaPathLen)  :: MODEL_INITCOND   = 'summa_zInitialCond.txt'         ! model initial conditions
 CHARACTER(LEN=summaPathLen)  :: PARAMETER_TRIAL  = 'summa_zParamTrial.txt'          ! trial values for model parameters
 CHARACTER(LEN=summaPathLen)  :: OUTPUT_PREFIX    = 'summa_output_'                  ! prefix for the output file
+CHARACTER(LEN=summaPathLen)  :: NETWORK_FILE     = 'train_inputs_set_0.txt'         ! neural network file
 
 contains
 
@@ -133,6 +134,7 @@ contains
    case('forcingListFile'    ); FORCING_FILELIST = trim(varEntry)              ! file listing forcing filenames
    case('initConditionFile'  ); MODEL_INITCOND = trim(varEntry)                ! initial conditions file (cold State)
    case('outFilePrefix'      ); OUTPUT_PREFIX = trim(varEntry)                 ! filename root for output files
+   case('neuralNetFile'      ); NETWORK_FILE = trim(varEntry)                 ! filename root for output files
    ! get to here if cannot find the variable
    case default
      err=10; message=trim(message)//"unknown control file option: "//trim(option); return

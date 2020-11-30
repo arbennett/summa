@@ -402,6 +402,7 @@ contains
   case('zmaxLayer2_upper'         ); get_ixparam = iLookPARAM%zmaxLayer2_upper       ! maximum layer depth for the 2nd layer when > 2 layers (m)
   case('zmaxLayer3_upper'         ); get_ixparam = iLookPARAM%zmaxLayer3_upper       ! maximum layer depth for the 3rd layer when > 3 layers (m)
   case('zmaxLayer4_upper'         ); get_ixparam = iLookPARAM%zmaxLayer4_upper       ! maximum layer depth for the 4th layer when > 4 layers (m)
+  case('laiScaleParam'            ); get_ixparam = iLookPARAM%laiScaleParam          !
   ! get to here if cannot find the variable
   case default
    get_ixparam = integerMissing

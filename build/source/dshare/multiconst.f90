@@ -31,7 +31,7 @@ MODULE multiconst
  REAL(DP), PARAMETER           :: gravity        = 9.80616_dp   ! acceleration of gravity              (m s-2)
  REAL(DP), PARAMETER           :: Cp_air         = 1005._dp     ! specific heat of air                 (J kg-1 K-1)
  REAL(DP), PARAMETER           :: Cp_ice         = 2114._dp     ! specific heat of ice                 (J kg-1 K-1)
- REAL(DP), PARAMETER           :: Cp_soil        = 850._dp      ! specific heat of soil                (J kg-1 K-1)
+ REAL(DP), PARAMETER           :: Cp_soil        = 874._dp + 850._dp      ! specific heat of soil                (J kg-1 K-1)
  REAL(DP), PARAMETER           :: Cp_water       = 4181._dp     ! specific heat of liquid water        (J kg-1 K-1)
  REAL(DP), PARAMETER           :: Tfreeze        = 273.16_dp    ! temperature at freezing              (K)
  REAL(DP), PARAMETER           :: TriplPt        = 273.16_dp    ! triple point of water                (K)

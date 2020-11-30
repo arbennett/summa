@@ -407,6 +407,7 @@ contains
 
   ! if water balance error then reduce the length of the coupled step
   if(waterBalanceError)then
+   print *, 'waterbalance error!'
    message=trim(message)//'water balance error'
    reduceCoupledStep=.true.
    err=-20; return
@@ -526,7 +527,7 @@ contains
 
  ! update error codes
  if(failedMinimumStep)then
-  err=-20 ! negative = recoverable error
+  err=-30 ! negative = recoverable error
   message=trim(message)//'failed minimum step'
  endif
 
@@ -798,15 +799,16 @@ contains
    compSink     = sum(mLayerCompress(1:nSoil) * mLayerDepth(nSnow+1:nLayers) ) ! dimensionless --> m
    liqError     = soilBalance1 - (soilBalance0 + vertFlux + tranSink - baseSink - compSink)
    if(abs(liqError) > absConvTol_liquid*10._dp)then   ! *10 because of precision issues
-    !write(*,'(a,1x,f20.10)') 'dt = ', dt
-    !write(*,'(a,1x,f20.10)') 'soilBalance0      = ', soilBalance0
-    !write(*,'(a,1x,f20.10)') 'soilBalance1      = ', soilBalance1
-    !write(*,'(a,1x,f20.10)') 'vertFlux          = ', vertFlux
-    !write(*,'(a,1x,f20.10)') 'tranSink          = ', tranSink
-    !write(*,'(a,1x,f20.10)') 'baseSink          = ', baseSink
-    !write(*,'(a,1x,f20.10)') 'compSink          = ', compSink
-    !write(*,'(a,1x,f20.10)') 'liqError          = ', liqError
-    !write(*,'(a,1x,f20.10)') 'absConvTol_liquid = ', absConvTol_liquid
+    write(*,*) 'line 802'
+    write(*,'(a,1x,f20.10)') 'dt = ', dt
+    write(*,'(a,1x,f20.10)') 'soilBalance0      = ', soilBalance0
+    write(*,'(a,1x,f20.10)') 'soilBalance1      = ', soilBalance1
+    write(*,'(a,1x,f20.10)') 'vertFlux          = ', vertFlux
+    write(*,'(a,1x,f20.10)') 'tranSink          = ', tranSink
+    write(*,'(a,1x,f20.10)') 'baseSink          = ', baseSink
+    write(*,'(a,1x,f20.10)') 'compSink          = ', compSink
+    write(*,'(a,1x,f20.10)') 'liqError          = ', liqError
+    write(*,'(a,1x,f20.10)') 'absConvTol_liquid = ', absConvTol_liquid
     waterBalanceError = .true.
     return
    endif  ! if there is a water balance error

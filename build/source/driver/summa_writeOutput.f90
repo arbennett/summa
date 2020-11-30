@@ -278,8 +278,8 @@ contains
 
  ! print a restart file if requested
  if(printRestart)then
-  write(timeString,'(a,i4,3(a,i2.2))') '_',timeStruct%var(iLookTIME%iyyy),'-',timeStruct%var(iLookTIME%im),'-',timeStruct%var(iLookTIME%id),'-',timeStruct%var(iLookTIME%ih)
-  restartFile=trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//'_'//trim('summaRestart')//trim(timeString)//trim(output_fileSuffix)//'.nc'
+  write(timeString,'(i4,3(i2.2))') timeStruct%var(iLookTIME%iyyy),timeStruct%var(iLookTIME%im),timeStruct%var(iLookTIME%id),timeStruct%var(iLookTIME%ih)
+  restartFile=trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//trim('_restart_')//trim(timeString)//trim(output_fileSuffix)//'.nc'
   call writeRestart(restartFile,nGRU,nHRU,prog_meta,progStruct,maxLayers,maxSnowLayers,indx_meta,indxStruct,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
  end if

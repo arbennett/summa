@@ -354,7 +354,7 @@ contains
 
  ! short-cut to the algorithmic control parameters
  ! NOTE - temporary assignment of minstep to foce something reasonable
- minstep = 10._dp  ! mpar_data%var(iLookPARAM%minstep)%dat(1)  ! minimum time step (s)
+ minstep = mpar_data%var(iLookPARAM%minstep)%dat(1)  ! minimum time step (s)
  maxstep = mpar_data%var(iLookPARAM%maxstep)%dat(1)  ! maximum time step (s)
  !print*, 'minstep, maxstep = ', minstep, maxstep
 
@@ -515,7 +515,8 @@ contains
  if(err/=0)then; err=20; message=trim(message)//trim(cmessage); return; end if
 
  ! adjust canopy temperature to account for new snow
- if(computeVegFlux)then ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+ !if(computeVegFlux)then ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+ if(.false.)then ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
   call tempAdjust(&
                   ! input: derived parameters
                   canopyDepth,                 & ! intent(in): canopy depth (m)
@@ -767,7 +768,9 @@ contains
    ! check that the step is not tiny
    if(dt_sub < minstep)then
     print*,ixSolution
-    print*, 'dtSave, dt_sub', dtSave, dt_sub
+    print*, prog_data%var(iLookPROG%scalarCanopyTemp)%dat
+    print*, prog_data%var(iLookPROG%mLayerTemp)%dat
+    print*, 'dtSave, dt_sub', dtSave, dt_sub, tooMuchMelt
     message=trim(message)//'length of the coupled step is below the minimum step length'
     err=20; return
    endif
@@ -1168,6 +1171,7 @@ contains
  ! check the soil water balance
  scalarSoilWatBalError  = balanceSoilWater1 - (balanceSoilWater0 + (balanceSoilInflux + balanceSoilET - balanceSoilBaseflow - balanceSoilDrainage - totalSoilCompress) )
  if(abs(scalarSoilWatBalError) > absConvTol_liquid*iden_water*10._dp)then  ! NOTE: kg m-2, so need coarse tolerance to account for precision issues
+ !if(.true.)then  ! NOTE: kg m-2, so need coarse tolerance to account for precision issues
   write(*,*)               'solution method           = ', ixSolution
   write(*,'(a,1x,f20.10)') 'data_step                 = ', data_step
   write(*,'(a,1x,f20.10)') 'totalSoilCompress         = ', totalSoilCompress
@@ -1195,8 +1199,10 @@ contains
 
  ! Save the total soil water (Liquid+Ice)
  diag_data%var(iLookDIAG%scalarTotalSoilWat)%dat(1) = balanceSoilWater1
+ diag_data%var(iLookDIAG%scalarSoilWatBalError)%dat(1) = scalarSoilWatBalError
  ! save the surface temperature (just to make things easier to visualize)
  prog_data%var(iLookPROG%scalarSurfaceTemp)%dat(1) = prog_data%var(iLookPROG%mLayerTemp)%dat(1)
+ prog_data%var(iLookPROG%scalarSurfaceTemp)%dat(1) = scalarSoilWatBalError
 
  ! overwrite flux data with the timestep-average value
  if(.not.backwardsCompatibility)then

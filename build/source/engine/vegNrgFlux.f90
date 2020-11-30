@@ -23,7 +23,6 @@ module vegNrgFlux_module
 ! data types
 USE nrtype
 
-USE mod_network, only : network_type
 
 ! derived types to define the data structures
 USE data_types,only:&
@@ -61,6 +60,10 @@ USE multiconst,only:sb         ! Stefan Boltzman constant             (W m-2 K-4
 USE multiconst,only:iden_air   ! intrinsic density of air             (kg m-3)
 USE multiconst,only:iden_ice   ! intrinsic density of ice             (kg m-3)
 USE multiconst,only:iden_water ! intrinsic density of liquid water    (kg m-3)
+
+USE summaFileManager,only:  &
+    SETNGS_PATH, &
+    NETWORK_FILE
 
 ! look-up values for method used to compute derivative
 USE mDecisions_module,only:  &
@@ -458,6 +461,8 @@ contains
  canopyWettingExp                => mpar_data%var(iLookPARAM%canopyWettingExp)%dat(1),              & ! intent(in): [dp] exponent in canopy wetting function (-)
  scalarCanopyIceMax              => diag_data%var(iLookDIAG%scalarCanopyIceMax)%dat(1),             & ! intent(in): [dp] maximum interception storage capacity for ice (kg m-2)
  scalarCanopyLiqMax              => diag_data%var(iLookDIAG%scalarCanopyLiqMax)%dat(1),             & ! intent(in): [dp] maximum interception storage capacity for liquid water (kg m-2)
+ vcmax_Kn                        => mpar_data%var(iLookPARAM%vcmax_Kn)%dat(1),                      &
+ laiScaleParam                   => mpar_data%var(iLookPARAM%laiScaleParam)%dat(1),                &
 
  ! input: vegetation phenology
  scalarLAI                       => diag_data%var(iLookDIAG%scalarLAI)%dat(1),                      & ! intent(in): [dp] one-sided leaf area index (m2 m-2)
@@ -479,7 +484,6 @@ contains
  windReductionParam              => mpar_data%var(iLookPARAM%windReductionParam)%dat(1),            & ! intent(in): [dp] canopy wind reduction parameter (-)
  leafExchangeCoeff               => mpar_data%var(iLookPARAM%leafExchangeCoeff)%dat(1),             & ! intent(in): [dp] turbulent exchange coeff between canopy surface and canopy air ( m s-(1/2) )
  leafDimension                   => mpar_data%var(iLookPARAM%leafDimension)%dat(1),                 & ! intent(in): [dp] characteristic leaf dimension (m)
-
  ! input: soil stress parameters
  theta_sat                       => mpar_data%var(iLookPARAM%theta_sat)%dat(1),                     & ! intent(in): [dp] soil porosity (-)
  theta_res                       => mpar_data%var(iLookPARAM%theta_res)%dat(1),                     & ! intent(in): [dp] residual volumetric liquid water content (-)
@@ -489,13 +493,20 @@ contains
  critSoilTranspire               => mpar_data%var(iLookPARAM%critSoilTranspire)%dat(1),             & ! intent(in): [dp] critical vol. liq. water content when transpiration is limited (-)
  critAquiferTranspire            => mpar_data%var(iLookPARAM%critAquiferTranspire)%dat(1),          & ! intent(in): [dp] critical aquifer storage value when transpiration is limited (m)
  minStomatalResistance           => mpar_data%var(iLookPARAM%minStomatalResistance)%dat(1),         & ! intent(in): [dp] mimimum stomatal resistance (s m-1)
+ rootingDepth                    => mpar_data%var(iLookPARAM%rootingDepth)%dat(1),         & ! intent(in): [dp] depth of roots
+ zScale_TOPMODEL                 => mpar_data%var(iLookPARAM%zScale_TOPMODEL)%dat(1),         & ! intent(in): [dp] depth of roots
 
  ! input: forcing at the upper boundary
  mHeight                         => diag_data%var(iLookDIAG%scalarAdjMeasHeight)%dat(1),            & ! intent(in): [dp] measurement height (m)
+ ! begin forcing
  airtemp                         => forc_data%var(iLookFORCE%airtemp),                              & ! intent(in): [dp] air temperature at some height above the surface (K)
  windspd                         => forc_data%var(iLookFORCE%windspd),                              & ! intent(in): [dp] wind speed at some height above the surface (m s-1)
  airpres                         => forc_data%var(iLookFORCE%airpres),                              & ! intent(in): [dp] air pressure at some height above the surface (Pa)
  LWRadAtm                        => forc_data%var(iLookFORCE%LWRadAtm),                             & ! intent(in): [dp] downwelling longwave radiation at the upper boundary (W m-2)
+ SWRadAtm                        => forc_data%var(iLookFORCE%SWRadAtm),                             & ! intent(in): [dp] downwelling longwave radiation at the upper boundary (W m-2)
+ spechum                         => forc_data%var(iLookFORCE%spechum),                             & ! intent(in): [dp] downwelling longwave radiation at the upper boundary (W m-2)
+ pptrate                         => forc_data%var(iLookFORCE%pptrate),                             & ! intent(in): [dp] downwelling longwave radiation at the upper boundary (W m-2)
+ ! end forcing
  scalarVPair                     => diag_data%var(iLookDIAG%scalarVPair)%dat(1),                    & ! intent(in): [dp] vapor pressure at some height above the surface (Pa)
  scalarO2air                     => diag_data%var(iLookDIAG%scalarO2air)%dat(1),                    & ! intent(in): [dp] atmospheric o2 concentration (Pa)
  scalarCO2air                    => diag_data%var(iLookDIAG%scalarCO2air)%dat(1),                   & ! intent(in): [dp] atmospheric co2 concentration (Pa)
@@ -510,6 +521,10 @@ contains
  scalarSWE                       => prog_data%var(iLookPROG%scalarSWE)%dat(1),                      & ! intent(in): [dp]    snow water equivalent on the ground (kg m-2)
  scalarSnowDepth                 => prog_data%var(iLookPROG%scalarSnowDepth)%dat(1),                & ! intent(in): [dp]    snow depth on the ground surface (m)
  mLayerVolFracLiq                => prog_data%var(iLookPROG%mLayerVolFracLiq)%dat,                  & ! intent(in): [dp(:)] volumetric fraction of liquid water in each layer (-)
+ mLayerVolFracWat                => prog_data%var(iLookPROG%mLayerVolFracWat)%dat,                  & ! intent(in): [dp(:)] volumetric fraction of liquid water in each layer (-)
+ mLayerTemp                      => prog_data%var(iLookPROG%mLayerTemp)%dat,                        & ! intent(in): [dp(:)] volumetric fraction of liquid water in each layer (-)
+ mLayerHeight                      => prog_data%var(iLookPROG%mLayerHeight)%dat,                    & ! intent(in): [dp(:)] height of each layer
+ mLayerDepth                     => prog_data%var(iLookPROG%mLayerDepth)%dat,                    & ! intent(in): [dp(:)] height of each layer
  mLayerMatricHead                => prog_data%var(iLookPROG%mLayerMatricHead)%dat,                  & ! intent(in): [dp(:)] matric head in each soil layer (m)
  localAquiferStorage             => prog_data%var(iLookPROG%scalarAquiferStorage)%dat(1),           & ! intent(in): [dp]    aquifer storage for the local column (m)
  basinAquiferStorage             => bvar_data%var(iLookBVAR%basin__AquiferStorage)%dat(1),          & ! intent(in): [dp]    aquifer storage for the single basin (m)
@@ -1187,9 +1202,37 @@ contains
                     ! input: model control
                     computeVegFlux,                       & ! intent(in): logical flag to compute vegetation fluxes (.false. if veg buried by snow)
                     ix_fDerivMeth,                        & ! intent(in): method used to calculate flux derivatives
+                    ! new parameters to add
+                    nSnow, nSoil, &
+                    soilTypeIndex,  &
+                    vegTypeIndex, &
+                    heightCanopyTop, &
+                    vcmax_Kn,  &
+                    canopyWettingFactor, &
+                    theta_sat, &
+                    theta_res,  &
+                    laiScaleParam,  &
+                    critSoilWilting, &
+                    rootingDepth, &
+                    zScale_TOPMODEL, &
+                    ! end new parameters to add
                     ! input: above-canopy forcing data
                     airtemp,                              & ! intent(in): air temperature at some height above the surface (K)
                     airpres,                              & ! intent(in): air pressure of the air above the vegetation canopy (Pa)
+                    ! new forcings to add
+                    spechum,                       &
+                    SWradAtm,                      &
+                    LWradAtm,                      &
+                    pptrate,                       &
+                    windspd,                       &
+                    mLayerVolFracWat, &
+                    mLayerRootDensity, &
+                    mLayerTemp, &
+                    mLayerHeight, &
+                    mLayerDepth, &
+                    scalarLAI, &
+                    scalarSWE, &
+                    ! end new forcings to add
                     scalarVPair,                          & ! intent(in): vapor pressure of the air above the vegetation canopy (Pa)
                     ! input: latent heat of sublimation/vaporization
                     scalarLatHeatSubVapCanopy,            & ! intent(in): latent heat of sublimation/vaporization for the vegetation canopy (J kg-1)
@@ -1420,8 +1463,10 @@ contains
    if(scalarLatHeatSubVapGround > LH_vap+verySmall)then ! sublimation
     ! NOTE: this should only occur when we have formed snow layers, so check
     if(nSnow == 0)then; err=20; message=trim(message)//'only expect snow sublimation when we have formed some snow layers'; return; end if
-    scalarGroundEvaporation = 0._dp  ! ground evaporation is zero once the snowpack has formed
-    scalarSnowSublimation   = scalarLatHeatGround/LH_sub
+    !scalarGroundEvaporation = 0._dp  ! ground evaporation is zero once the snowpack has formed
+    !scalarSnowSublimation   = scalarLatHeatGround/LH_sub
+    scalarGroundEvaporation = scalarLatHeatGround/LH_vap
+    scalarSnowSublimation   = 0._dp  ! no sublimation from snow if no snow layers have formed
    else
     ! NOTE: this should only occur when we have no snow layers, so check
     if(nSnow > 0)then; err=20; message=trim(message)//'only expect ground evaporation when there are no snow layers'; return; end if
@@ -2536,9 +2581,37 @@ contains
                        ! input: model control
                        computeVegFlux,                & ! intent(in): logical flag to compute vegetation fluxes (.false. if veg buried by snow)
                        ixDerivMethod,                 & ! intent(in): choice of method used to compute derivative (analytical or numerical)
+                       ! new parameters to add
+                       nSnow, nSoil, &
+                       soilTypeIndex,                 &
+                       vegTypeIndex,                  &
+                       heightCanopyTop,               &
+                       vcmax_Kn,                      &
+                       canopyWettingFactor,           &
+                       theta_sat,                      &
+                       theta_res,                     &
+                       laiScaleParam,                 &
+                       critSoilWilting, &
+                       rootingDepth, &
+                       zScale_TOPMODEL, &
+                       ! end new parameters to add
                        ! input: above-canopy forcing data
                        airtemp,                       & ! intent(in): air temperature at some height above the surface (K)
                        airpres,                       & ! intent(in): air pressure of the air above the vegetation canopy (Pa)
+                       ! new forcings to add
+                       spechum,                       &
+                       swradatm,                      &
+                       lwradatm,                      &
+                       pptrate,                       &
+                       windspd,                       &
+                       mLayerVolFracWat, &
+                       mLayerRootDensity, &
+                       mLayerTemp, &
+                       mLayerHeight, &
+                       mLayerDepth, &
+                       scalarLAI, &
+                       scalarSWE, &
+                       ! end new forcings to add
                        VPair,                         & ! intent(in): vapor pressure of the air above the vegetation canopy (Pa)
                        ! input: latent heat of sublimation/vaporization
                        latHeatSubVapCanopy,           & ! intent(in): latent heat of sublimation/vaporization for the vegetation canopy (J kg-1)
@@ -2623,13 +2696,43 @@ contains
                        ! output: error control
                        err,message                    ) ! intent(out): error control
  ! -----------------------------------------------------------------------------------------------------------------------------------------
+USE globalData,only: neuralNet
  implicit none
  ! input: model control
  logical(lgt),intent(in)       :: computeVegFlux        ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
  integer(i4b),intent(in)       :: ixDerivMethod         ! choice of method used to compute derivative (analytical or numerical)
+ integer(i4b), intent(in) :: soilTypeIndex
+ integer(i4b), intent(in) :: vegTypeIndex
+ integer(i4b), intent(in) :: nSnow
+ integer(i4b), intent(in) :: nSoil
+ real(dp), intent(in) :: heightCanopyTop
+ real(dp), intent(in) :: vcmax_Kn
+ real(dp), intent(in) :: canopyWettingFactor
+ real(dp), intent(in) :: theta_sat
+ real(dp), intent(in) :: theta_res
+ real(dp), intent(in) :: laiScaleParam
+ real(dp), intent(in) :: critSoilWilting
+ real(dp), intent(in) :: rootingDepth
+ real(dp), intent(in) :: zScale_TOPMODEL
+
  ! input: above-canopy forcing data
  real(dp),intent(in)           :: airtemp               ! air temperature at some height above the surface (K)
  real(dp),intent(in)           :: airpres               ! air pressure of the air above the vegetation canopy (Pa)
+ ! new forcing addition
+ real(dp),intent(in)           :: spechum
+ real(dp),intent(in)           :: swradatm
+ real(dp),intent(in)           :: lwradatm
+ real(dp),intent(in)           :: pptrate
+ real(dp),intent(in)           :: windspd
+ real(dp),intent(in)           :: mLayerVolFracWat(:)
+ real(dp),intent(in)           :: mLayerRootDensity(:)
+ real(dp),intent(in)           :: mLayerTemp(:)
+ real(dp),intent(in)           :: mLayerHeight(:)
+ real(dp),intent(in)           :: mLayerDepth(:)
+ real(dp),intent(in)           :: scalarLAI
+ real(dp),intent(in)           :: scalarSWE
+
+ ! end new forcing addition
  real(dp),intent(in)           :: VPair                 ! vapor pressure of the air above the vegetation canopy (Pa)
  ! input: latent heat of sublimation/vaporization
  real(dp),intent(in)           :: latHeatSubVapCanopy   ! latent heat of sublimation/vaporization for the vegetation canopy (J kg-1)
@@ -2763,9 +2866,13 @@ contains
  real(dp)                      :: fracCanEvap  ! fraction of estimated LE from canopy evaporation
  real(dp)                      :: fracCanTrans ! fraction of estimated LE from canopy transpiration
  real(dp)                      :: fracGndEvap  !  fraction of estimated LE from ground evaporation
- type(network_type)            :: net
- real(4), dimension(8)         :: net_input
- real(8), dimension(1)         :: net_output
+ real(dp)                      :: fracCanSen  ! fraction of estimated LE from canopy evaporation
+ real(dp)                      :: fracGndSen  !  fraction of estimated LE from ground evaporation
+ real(dp)                      :: depthAvgTemp !  depth averaged temperature
+ real(dp)                      :: totalET!  depth averaged temperature
+ real(dp)                      :: maximumET!  depth averaged temperature
+ real(4), dimension(23)        :: net_input
+ real(8), dimension(3)         :: net_output
  ! -----------------------------------------------------------------------------------------------------------------------------------------
  ! initialize error control
  err=0; message='turbFluxes/'
@@ -2859,37 +2966,12 @@ contains
 
  ! * compute sensible and latent heat fluxes from the canopy to the canopy air space (W m-2)
  if(computeVegFlux)then
-
   ! compute the vapor pressure in the canopy air space (Pa)
   fPart_VP     = canopyConductance*VPair + (evapConductance + transConductance)*satVP_CanopyTemp + groundConductanceLH*satVP_GroundTemp*soilRelHumidity
   VP_CanopyAir = fPart_VP/totalConductanceLH
-  !write(*,'(a,10(f20.10,1x))') 'canopyConductance, evapConductance, transConductance, groundConductanceLH, soilRelHumidity = ', &
-  !                              canopyConductance, evapConductance, transConductance, groundConductanceLH, soilRelHumidity
-
-  ! compute sensible heat flux from the canopy air space to the atmosphere
-  ! NOTE: canairTemp is a state variable
-  senHeatTotal = -volHeatCapacityAir*canopyConductance*(canairTemp - airtemp)
-  !print*, 'canairTemp, airtemp, senHeatTotal = ', canairTemp, airtemp, senHeatTotal
-
-  ! compute fluxes
   senHeatCanopy      = -volHeatCapacityAir*leafConductance*(canopyTemp - canairTemp)        ! (positive downwards)
   latHeatCanopyEvap  = -latHeatSubVapCanopy*latentHeatConstant*evapConductance*(satVP_CanopyTemp - VP_CanopyAir)    ! (positive downwards)
-  !write(*,'(a,10(f25.15,1x))') 'latHeatCanopyEvap, VP_CanopyAir = ', latHeatCanopyEvap, VP_CanopyAir
-  !write(*,'(a,10(f25.15,1x))') 'latHeatCanopyTrans, VP_CanopyAir = ', latHeatCanopyTrans, VP_CanopyAir
-  !write(*,'(a,10(f25.15,1x))') 'transConductance = ', transConductance
   latHeatCanopyTrans =              -LH_vap*latentHeatConstant*transConductance*(satVP_CanopyTemp - VP_CanopyAir)   ! (positive downwards)
-
-  ! check that energy for canopy evaporation does not exhaust the available water
-  ! NOTE: do this here, rather than enforcing solution constraints, because energy and mass solutions may be uncoupled
-  !if(latHeatSubVapCanopy > LH_vap+verySmall)then ! (sublimation)
-  ! maxFlux = -canopyIce*LH_sub/dt       ! W m-2
-  !else ! (evaporation)
-  ! maxFlux = -canopyLiquid*LH_vap/dt    ! W m-2
-  !end if
-  ! NOTE: fluxes are positive downwards
-  !if(latHeatCanopyEvap < maxFlux) latHeatCanopyEvap = maxFlux
-  !write(*,'(a,10(f20.10,1x))') 'maxFlux, latHeatCanopyEvap = ', maxFlux, latHeatCanopyEvap
-
  ! * no vegetation, so fluxes are zero
  else
   senHeatCanopy      = 0._dp
@@ -2904,46 +2986,97 @@ contains
  else
   senHeatGround      = -volHeatCapacityAir*groundConductanceSH*(groundTemp - airtemp)                                                 ! (positive downwards)
   latHeatGround      = -latHeatSubVapGround*latentHeatConstant*groundConductanceLH*(satVP_GroundTemp*soilRelHumidity - VPair)         ! (positive downwards)
-  senHeatTotal       = senHeatGround
  end if
+ latHeatTotal = latHeatCanopyEvap + latHeatCanopyTrans + latHeatGround
+ senHeatTotal = senHeatGround + senHeatCanopy
+ if (isnan(latHeatCanopyEvap) .or. isnan(latHeatCanopyTrans) .or. isnan(latHeatGround) .or. isnan(senHeatGround) .or.  isnan(senHeatCanopy)) then
+   write(*,*) 'something nan -> ', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround, senHeatGround, senHeatCanopy
+   fracCanEvap =  0.34_dp
+   fracCanTrans = 0.33_dp
+   fracGndEvap =  0.33_dp
+   fracGndSen =  0.5_dp
+   fracCanSen =  0.5_dp
+ else
+   fracCanEvap  = latHeatCanopyEvap  / latHeatTotal
+   fracCanTrans = latHeatCanopyTrans / latHeatTotal
+   fracGndEvap  = latHeatGround      / latHeatTotal
+   fracGndSen   = senHeatGround      / senHeatTotal
+   fracCanSen   = senHeatCanopy      / senHeatTotal
+ endif
+
+ !----------------------------------------------------------------
+ ! NEURAL NETWORK GOES HERE
+ !----------------------------------------------------------------
+ depthAvgTemp = sum(mLayerHeight(nSnow+1:nSnow+nSoil) * mLayerTemp(nSnow+1:nSnow+nSoil) ) / sum(mLayerHeight(nsnow+1:nsnow+nSoil) )
+ net_input = (/ (((airtemp / 27.315_dp) - 10.0_dp) / 2.0_dp) + 0.5_dp, &   ! airtemp
+                spechum * 50.0_dp, &                                       ! spechum
+                (swradatm / 1000.0_dp) ** (1.0_dp / 3.0_dp), &             ! swradatm
+                lwradatm / ( 2.0_dp * 273.15_dp ), &                       ! lwradatm
+                10.0_dp * ((pptrate) ** (1.0_dp / 3.0_dp)), &              ! pptrate
+                (10.0_dp - (airpres / 10132.5_dp)) / 2.0_dp, &             ! airpres
+                windspd / 10.0_dp, &                                       ! windspd
+                real(vegTypeIndex) / 12.0_dp, &                            ! vegtype
+                real(soilTypeIndex) / 12.0_dp, &                           ! soiltype
+                vcmax_Kn, &                                                ! vcmax
+                canopyWettingFactor, &                                     ! canopytwettingfactor
+                theta_sat, &                                               ! theta_sat
+                theta_res, &                                               ! theta_res
+                laiScaleparam / 3.0_dp, &                                  ! laiscale
+                rootingDepth / 5.0_dp, &                                   ! rootdepth
+                zScale_TOPMODEL / 8.0_dp, &                                ! zscale
+                VPair / 2000._dp, &                                        ! vp_air
+                scalarLAI / 12._dp, &                                      ! lai
+                mLayerVolFracWat(nSnow+1), &                               ! surface sm
+                (((depthAvgTemp / 27.315_dp) - 10.0_dp)/ 2.0_dp) + 0.5_dp, & ! average temp
+                (((mLayerTemp(nSnow+1) / 27.315_dp) - 10.0_dp )/ 2.0_dp) + 0.5_dp, &                           ! surface temp
+                max(sum(mLayerRootDensity(1:nSoil) * mLayerVolFracWat(nSnow+1:nSnow+nSoil)), 0.0_dp), &        ! transpirable
+                min(scalarSWE, 1.0_dp) &                                                                       ! swe
+            /)
+ !print*, sum(mLayerRootDensity(:) * mLayerVolFracWat(nSnow+1:nSnow+nSoil)) - critSoilWilting
+
+ !print *, net_input
+ net_output = neuralNet%output(net_input)
+ fracGndEvap   = latHeatTotal / (-500.0_dp * real(net_output(1)))
+ latHeatTotal = -500.0_dp * (real(net_output(1)))
+ fracGndSen   = senHeatTotal / (-500.0_dp * real(net_output(2)))
+ senHeatTotal = -500.0_dp * (real(net_output(2)))
+ if (isnan(latHeatGround)) then
+   write(*,*) '============================================================'
+   write(*,*) mLayerTemp(:)
+   write(*,*) '============================================================'
+   write(*,*) mLayerVolFracWat(:)
+   write(*,*) '============================================================'
+   write(*,*) ' -----> ', net_input
+   write(*,*) ' -----> ', latHeatGround, senHeatTotal
+ endif
+ if (isnan(senHeatGround)) then
+ end if
+ latHeatGround = latHeatTotal! * fracGndEvap
+ latHeatCanopyEvap = 0.0_dp
+ latHeatCanopyTrans =  0.0_dp ! latHeatTotal * (1.0_dp - fracGndEvap)
+ senHeatGround = senHeatTotal
+ senHeatCanopy = 0.0_dp
+
+ totalET = -1800.0_dp * (latHeatTotal/LH_vap) * iden_water
+ maximumET = iden_water * sum((mLayerVolFracWat(nSnow+1:nSnow+nSoil)-critSoilWilting) &
+                              * mLayerDepth(nSnow+1:nSnow+nSoil))
+
+ if (totalET > maximumET) then
+    latHeatTotal = -maximumET / (iden_water * 1800.0_dp)
+    latHeatGround = -maximumET / (iden_water * 1800.0_dp)
+ endif
+ !latHeatCanopyEvap = fracCanEvap * latHeatTotal
+ !latHeatCanopyTrans = fracCanTrans * latHeatTotal
+ !latHeatGround = fracGndEvap * latHeatTotal
+ !senHeatCanopy = fracCanSen * senHeatTotal
+ !senHeatGround = fracGndSen * senHeatTotal
+ !----------------------------------------------------------------
+ ! NEURAL NETWORK GOES HERE
+ !----------------------------------------------------------------
  !write(*,'(a,10(f25.15,1x))') 'latHeatGround = ', latHeatGround
 
  ! compute latent heat flux from the canopy air space to the atmosphere
  ! NOTE: VP_CanopyAir is a diagnostic variable
- latHeatTotal = latHeatCanopyEvap + latHeatCanopyTrans + latHeatGround
-
- if (isnan(latHeatCanopyEvap) .or. isnan(latHeatCanopyTrans) .or. isnan(latHeatGround)) then
-   write(*,*) '1', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround
-   fracCanEvap =  0.34_dp
-   fracCanTrans = 0.33_dp
-   fracGndEvap =  0.33_dp
- else
-   fracCanEvap =  latHeatCanopyEvap   / latHeatTotal
-   fracCanTrans = latHeatCanopyTrans / latHeatTotal
-   fracGndEvap =  latHeatGround       / latHeatTotal
- endif
-
-  !----------------------------------------------------------------
-  ! NEURAL NETWORK GOES HERE
-  !----------------------------------------------------------------
-  call net%load('/pool0/data/andrbenn/ml_summa/models/DE-Obe_qle_config.txt')
-  net_input = (/ latHeatSubVapCanopy, latentHeatConstant, evapConductance, satVP_CanopyTemp - VP_CanopyAir, &
-                 transConductance, latHeatSubVapGround, groundConductanceLH, satVP_GroundTemp*soilRelHumidity - VP_CanopyAir/)
-  net_output = net%output(net_input)
-  latHeatTotal = real(net_output(1) ** 2)  -1345.8562623576624
-  latHeatCanopyEvap = latHeatTotal * fracCanEvap
-  latHeatCanopyTrans = latHeatTotal * fracCanTrans
-  latHeatGround = latHeatTotal * fracGndEvap
-  if (isnan(latHeatCanopyEvap) .or. isnan(latHeatCanopyTrans) .or. isnan(latHeatGround)) then
-    write(*,*) '2', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround
-  endif
-  if ((latHeatCanopyEvap .eq. latHeatCanopyEvap-1.0_dp) .or. (latHeatCanopyTrans .eq. latHeatCanopyTrans-1.0_dp) .or. (latHeatGround .eq.latHeatGround-1.0_dp)) then
-    write(*,*) '3', latHeatCanopyEvap, latHeatCanopyTrans, latHeatGround
-  endif
-  !----------------------------------------------------------------
-  ! NEURAL NETWORK GOES HERE
-  !----------------------------------------------------------------
-
 
  ! * compute derivatives
  if(ixDerivMethod == analytical)then
@@ -3090,7 +3223,7 @@ contains
  ! compute net fluxes
  turbFluxCanair = senHeatTotal - senHeatCanopy - senHeatGround            ! net turbulent flux at the canopy air space (W m-2)
  turbFluxCanopy = senHeatCanopy + latHeatCanopyEvap + latHeatCanopyTrans  ! net turbulent flux at the canopy (W m-2)
- turbFluxGround = senHeatGround + latHeatGround                           ! net turbulent flux at the ground surface (W m-2)
+ turbFluxGround = (senHeatGround * fracGndSen) + (latHeatGround * fracGndEvap) ! net turbulent flux at the ground surface (W m-2
  !write(*,'(a,1x,3(f20.10,1x))') 'senHeatCanopy, latHeatCanopyEvap, latHeatCanopyTrans = ', senHeatCanopy, latHeatCanopyEvap, latHeatCanopyTrans
 
   ! * compute derivatives
