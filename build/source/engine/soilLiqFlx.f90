@@ -1013,6 +1013,7 @@ contains
    ! compute the hydraulic conductivity of macropores (m s-1)
    localVolFracLiq = volFracLiq(scalarMatricHeadTrial,vGn_alpha,theta_res,theta_sat,vGn_n,vGn_m)
    scalarHydCondMP = hydCondMP_liq(localVolFracLiq,theta_sat,theta_mp,mpExp,scalarSatHydCondMP,scalarSatHydCond)
+   scalarHydCondMP = max(scalarHydCondMP, 0.0_dp)
    scalarHydCond   = hydCond_noIce*iceImpedeFac + scalarHydCondMP
 
    ! compute derivative in hydraulic conductivity (m s-1)
