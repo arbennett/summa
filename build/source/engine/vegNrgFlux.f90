@@ -102,7 +102,7 @@ USE mDecisions_module,only:  &
 USE mDecisions_module,only:  &
  localColumn,                & ! separate groundwater representation in each local soil column
  singleBasin                   ! single groundwater store over the entire basin
-
+USE conv_funcs_module,only:SPHM2RELHM
 ! -------------------------------------------------------------------------------------------------
 ! privacy
 implicit none
@@ -490,6 +490,7 @@ contains
  plantWiltPsi                    => mpar_data%var(iLookPARAM%plantWiltPsi)%dat(1),                  & ! intent(in): [dp] matric head at wilting point (m)
  soilStressParam                 => mpar_data%var(iLookPARAM%soilStressParam)%dat(1),               & ! intent(in): [dp] parameter in the exponential soil stress function (-)
  critSoilWilting                 => mpar_data%var(iLookPARAM%critSoilWilting)%dat(1),               & ! intent(in): [dp] critical vol. liq. water content when plants are wilting (-)
+ fieldCapacity                   => mpar_data%var(iLookPARAM%fieldCapacity)%dat(1),               & ! intent(in): [dp] critical vol. liq. water content when plants are wilting (-)
  critSoilTranspire               => mpar_data%var(iLookPARAM%critSoilTranspire)%dat(1),             & ! intent(in): [dp] critical vol. liq. water content when transpiration is limited (-)
  critAquiferTranspire            => mpar_data%var(iLookPARAM%critAquiferTranspire)%dat(1),          & ! intent(in): [dp] critical aquifer storage value when transpiration is limited (m)
  minStomatalResistance           => mpar_data%var(iLookPARAM%minStomatalResistance)%dat(1),         & ! intent(in): [dp] mimimum stomatal resistance (s m-1)
@@ -1213,6 +1214,7 @@ contains
                     theta_res,  &
                     laiScaleParam,  &
                     critSoilWilting, &
+                    fieldCapacity, &
                     rootingDepth, &
                     zScale_TOPMODEL, &
                     ! end new parameters to add
@@ -2592,6 +2594,7 @@ contains
                        theta_res,                     &
                        laiScaleParam,                 &
                        critSoilWilting, &
+                       fieldCapacity, &
                        rootingDepth, &
                        zScale_TOPMODEL, &
                        ! end new parameters to add
@@ -2712,6 +2715,7 @@ USE globalData,only: neuralNet
  real(dp), intent(in) :: theta_res
  real(dp), intent(in) :: laiScaleParam
  real(dp), intent(in) :: critSoilWilting
+ real(dp), intent(in) :: fieldCapacity
  real(dp), intent(in) :: rootingDepth
  real(dp), intent(in) :: zScale_TOPMODEL
 
@@ -2870,9 +2874,10 @@ USE globalData,only: neuralNet
  real(dp)                      :: fracGndSen  !  fraction of estimated LE from ground evaporation
  real(dp)                      :: depthAvgTemp !  depth averaged temperature
  real(dp)                      :: totalET!  depth averaged temperature
+ real(dp)                      :: sm_min!  depth averaged temperature
  real(dp)                      :: maximumET!  depth averaged temperature
- real(4), dimension(23)        :: net_input
- real(8), dimension(3)         :: net_output
+ real(4), dimension(6)        :: net_input
+ real(8), dimension(2)         :: net_output
  ! -----------------------------------------------------------------------------------------------------------------------------------------
  ! initialize error control
  err=0; message='turbFluxes/'
@@ -3003,34 +3008,20 @@ USE globalData,only: neuralNet
    fracGndSen   = senHeatGround      / senHeatTotal
    fracCanSen   = senHeatCanopy      / senHeatTotal
  endif
-
+ if (fieldCapacity < critSoilWilting) then
+    sm_min = fieldCapacity
+ else
+    sm_min = critSoilWilting
+ endif
  !----------------------------------------------------------------
  ! NEURAL NETWORK GOES HERE
  !----------------------------------------------------------------
- depthAvgTemp = sum(mLayerHeight(nSnow+1:nSnow+nSoil) * mLayerTemp(nSnow+1:nSnow+nSoil) ) / sum(mLayerHeight(nsnow+1:nsnow+nSoil) )
  net_input = (/ (((airtemp / 27.315_dp) - 10.0_dp) / 2.0_dp) + 0.5_dp, &   ! airtemp
-                spechum * 50.0_dp, &                                       ! spechum
-                (swradatm / 1000.0_dp) ** (1.0_dp / 3.0_dp), &             ! swradatm
-                lwradatm / ( 2.0_dp * 273.15_dp ), &                       ! lwradatm
-                10.0_dp * ((pptrate) ** (1.0_dp / 3.0_dp)), &              ! pptrate
-                (10.0_dp - (airpres / 10132.5_dp)) / 2.0_dp, &             ! airpres
-                windspd / 10.0_dp, &                                       ! windspd
-                real(vegTypeIndex) / 12.0_dp, &                            ! vegtype
-                real(soilTypeIndex) / 12.0_dp, &                           ! soiltype
-                vcmax_Kn, &                                                ! vcmax
-                canopyWettingFactor, &                                     ! canopytwettingfactor
-                theta_sat, &                                               ! theta_sat
-                theta_res, &                                               ! theta_res
-                laiScaleparam / 3.0_dp, &                                  ! laiscale
-                rootingDepth / 5.0_dp, &                                   ! rootdepth
-                zScale_TOPMODEL / 8.0_dp, &                                ! zscale
-                VPair / 2000._dp, &                                        ! vp_air
-                scalarLAI / 12._dp, &                                      ! lai
-                mLayerVolFracWat(nSnow+1), &                               ! surface sm
-                (((depthAvgTemp / 27.315_dp) - 10.0_dp)/ 2.0_dp) + 0.5_dp, & ! average temp
-                (((mLayerTemp(nSnow+1) / 27.315_dp) - 10.0_dp )/ 2.0_dp) + 0.5_dp, &                           ! surface temp
-                max(sum(mLayerRootDensity(1:nSoil) * mLayerVolFracWat(nSnow+1:nSnow+nSoil)), 0.0_dp), &        ! transpirable
-                min(scalarSWE, 1.0_dp) &                                                                       ! swe
+                SPHM2RELHM(spechum, airpres, airtemp), &                   ! relhum
+                (swradatm / 1000.0_dp), &                                  ! swradatm
+                (sum((mLayerDepth(nSnow+1:nSnow+3)/sum(mLayerDepth(nSnow+1:nSnow+3))) * mLayerVolFracWat(nSnow+1:nSnow+3)) - sm_min) / (theta_sat - sm_min), &
+                (scalarLAI / 12.0_dp) / (heightCanopyTop / 20.0_dp), &
+                vegTypeIndex / 12.0_dp &
             /)
  !print*, sum(mLayerRootDensity(:) * mLayerVolFracWat(nSnow+1:nSnow+nSoil)) - critSoilWilting
 
@@ -3058,7 +3049,7 @@ USE globalData,only: neuralNet
  senHeatCanopy = 0.0_dp
 
  totalET = -1800.0_dp * (latHeatTotal/LH_vap) * iden_water
- maximumET = iden_water * sum((mLayerVolFracWat(nSnow+1:nSnow+nSoil)-critSoilWilting) &
+ maximumET = iden_water * sum((mLayerVolFracWat(nSnow+1:nSnow+nSoil)-sm_min) &
                               * mLayerDepth(nSnow+1:nSnow+nSoil))
 
  if (totalET > maximumET) then
