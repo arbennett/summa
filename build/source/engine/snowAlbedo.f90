@@ -81,7 +81,7 @@ contains
  USE snow_utils_module,only:fracliquid                          ! compute fraction of liquid water at a given temperature
  ! --------------------------------------------------------------------------------------------------------------------------------------
  ! input: model control
- real(rk),intent(in)             :: dt                          ! model time step
+ real(rkind),intent(in)             :: dt                          ! model time step
  logical(lgt),intent(in)         :: snowPresence                ! logical flag to denote if snow is present
  ! input/output: data structures
  type(model_options),intent(in)  :: model_decisions(:)          ! model decisions
@@ -95,16 +95,16 @@ contains
  ! local variables
  integer(i4b),parameter          :: ixVisible=1                  ! named variable to define index in array of visible part of the spectrum
  integer(i4b),parameter          :: ixNearIR=2                   ! named variable to define index in array of near IR part of the spectrum
- real(rk),parameter              :: valueMissing=-9999._rk       ! missing value -- will cause problems if snow albedo is ever used for the non-snow case
- real(rk),parameter              :: slushExp=10._rk              ! "slush" exponent, to increase decay when snow is near Tfreeze
- real(rk),parameter              :: fractionLiqThresh=0.001_rk   ! threshold for the fraction of liquid water to switch to spring albedo minimum
- real(rk)                        :: fractionLiq                  ! fraction of liquid water (-)
- real(rk)                        :: age1,age2,age3               ! aging factors (-)
- real(rk)                        :: decayFactor                  ! albedo decay factor (-)
- real(rk)                        :: refreshFactor                ! albedo refreshment factor, representing albedo increase due to snowfall (-)
- real(rk)                        :: albedoMin                    ! minimum albedo -- depends if in winter or spring conditions (-)
- real(rk)                        :: fZen                         ! factor to modify albedo at low zenith angles (-)
- real(rk),parameter              :: bPar=2._rk                   ! empirical parameter in fZen
+ real(rkind),parameter              :: valueMissing=-9999._rkind       ! missing value -- will cause problems if snow albedo is ever used for the non-snow case
+ real(rkind),parameter              :: slushExp=10._rkind              ! "slush" exponent, to increase decay when snow is near Tfreeze
+ real(rkind),parameter              :: fractionLiqThresh=0.001_rkind   ! threshold for the fraction of liquid water to switch to spring albedo minimum
+ real(rkind)                        :: fractionLiq                  ! fraction of liquid water (-)
+ real(rkind)                        :: age1,age2,age3               ! aging factors (-)
+ real(rkind)                        :: decayFactor                  ! albedo decay factor (-)
+ real(rkind)                        :: refreshFactor                ! albedo refreshment factor, representing albedo increase due to snowfall (-)
+ real(rkind)                        :: albedoMin                    ! minimum albedo -- depends if in winter or spring conditions (-)
+ real(rkind)                        :: fZen                         ! factor to modify albedo at low zenith angles (-)
+ real(rkind),parameter              :: bPar=2._rkind                   ! empirical parameter in fZen
  ! initialize error control
  err=0; message='snowAlbedo/'
  ! --------------------------------------------------------------------------------------------------------------------------------------
@@ -188,18 +188,18 @@ contains
    call computeAlbedo(spectralSnowAlbedoDiffuse(ixVisible),refreshFactor,decayFactor,albedoMaxVisible,albedoMinVisible)
    call computeAlbedo(spectralSnowAlbedoDiffuse(ixNearIR), refreshFactor,decayFactor,albedoMaxNearIR, albedoMinNearIR)
    ! compute factor to modify direct albedo at low zenith angles
-   if(cosZenith < 0.5_rk)then
-    fZen = (1._rk/bPar)*( ((1._rk + bPar)/(1._rk + 2._rk*bPar*cosZenith)) - 1._rk)
+   if(cosZenith < 0.5_rkind)then
+    fZen = (1._rkind/bPar)*( ((1._rkind + bPar)/(1._rkind + 2._rkind*bPar*cosZenith)) - 1._rkind)
    else
-    fZen = 0._rk
+    fZen = 0._rkind
    end if
    ! compute direct albedo
-   spectralSnowAlbedoDirect(ixVisible) = spectralSnowAlbedoDiffuse(ixVisible) + 0.4_rk*fZen*(1._rk - spectralSnowAlbedoDiffuse(ixVisible))
-   spectralSnowAlbedoDirect(ixNearIR)  = spectralSnowAlbedoDiffuse(ixNearIR)  + 0.4_rk*fZen*(1._rk - spectralSnowAlbedoDiffuse(ixNearIR))
+   spectralSnowAlbedoDirect(ixVisible) = spectralSnowAlbedoDiffuse(ixVisible) + 0.4_rkind*fZen*(1._rkind - spectralSnowAlbedoDiffuse(ixVisible))
+   spectralSnowAlbedoDirect(ixNearIR)  = spectralSnowAlbedoDiffuse(ixNearIR)  + 0.4_rkind*fZen*(1._rkind - spectralSnowAlbedoDiffuse(ixNearIR))
 
    ! compute average albedo
-   scalarSnowAlbedo = (        Frad_direct)*(Frad_vis*spectralSnowAlbedoDirect(ixVisible) + (1._rk - Frad_vis)*spectralSnowAlbedoDirect(ixNearIR) ) + &
-                      (1._rk - Frad_direct)*(Frad_vis*spectralSnowAlbedoDirect(ixVisible) + (1._rk - Frad_vis)*spectralSnowAlbedoDirect(ixNearIR) )
+   scalarSnowAlbedo = (        Frad_direct)*(Frad_vis*spectralSnowAlbedoDirect(ixVisible) + (1._rkind - Frad_vis)*spectralSnowAlbedoDirect(ixNearIR) ) + &
+                      (1._rkind - Frad_direct)*(Frad_vis*spectralSnowAlbedoDirect(ixVisible) + (1._rkind - Frad_vis)*spectralSnowAlbedoDirect(ixNearIR) )
 
   ! check that we identified the albedo option
   case default; err=20; message=trim(message)//'unable to identify option for snow albedo'; return
@@ -207,7 +207,7 @@ contains
  end select  ! identify option for snow albedo
 
  ! check
- if(scalarSnowAlbedo < 0._rk)then; err=20; message=trim(message)//'unable to identify option for snow albedo'; return; end if
+ if(scalarSnowAlbedo < 0._rkind)then; err=20; message=trim(message)//'unable to identify option for snow albedo'; return; end if
 
  ! end association to data structures
  end associate
@@ -221,15 +221,15 @@ contains
  subroutine computeAlbedo(snowAlbedo,refreshFactor,decayFactor,albedoMax,albedoMin)
  implicit none
  ! dummy variables
- real(rk),intent(inout)   :: snowAlbedo    ! snow albedo (-)
- real(rk),intent(in)      :: refreshFactor ! albedo refreshment factor (-)
- real(rk),intent(in)      :: decayFactor   ! albedo decay factor (-)
- real(rk),intent(in)      :: albedoMax     ! maximum albedo (-)
- real(rk),intent(in)      :: albedoMin     ! minimum albedo (-)
+ real(rkind),intent(inout)   :: snowAlbedo    ! snow albedo (-)
+ real(rkind),intent(in)      :: refreshFactor ! albedo refreshment factor (-)
+ real(rkind),intent(in)      :: decayFactor   ! albedo decay factor (-)
+ real(rkind),intent(in)      :: albedoMax     ! maximum albedo (-)
+ real(rkind),intent(in)      :: albedoMin     ! minimum albedo (-)
  ! local variables
- real(rk)                 :: albedoChange ! change in albedo over the time step (-)
+ real(rkind)                 :: albedoChange ! change in albedo over the time step (-)
  ! compute change in albedo
- albedoChange = refreshFactor*(albedoMax - snowAlbedo) - (decayFactor*(snowAlbedo - albedoMin)) / (1._rk + decayFactor)
+ albedoChange = refreshFactor*(albedoMax - snowAlbedo) - (decayFactor*(snowAlbedo - albedoMin)) / (1._rkind + decayFactor)
  snowAlbedo   = snowAlbedo + albedoChange
  if(snowAlbedo > albedoMax) snowAlbedo = albedoMax
  end subroutine computeAlbedo
